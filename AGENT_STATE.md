@@ -1,15 +1,12 @@
 # AGENT STATE
 
-- Phase: 0
-- Status: COMPLETE (verification passed 2026-11-21 WIB)
-- Branch: `main`
-- Verified runtime commit: `d7a1310` (`fix: gunakan payload editorial usia 20-an pada simulasi`)
-- Base Phase 0 commit: `6150620`
-- Working tree target after documentation checkpoint: clean
-- Runtime: Node 24 containers, PostgreSQL 17, four Compose services
-- Last verification: lint PASS; typecheck PASS; 4 tests PASS; build PASS; npm audit 0 vulnerabilities; Docker E2E PASS; browser button PASS; restart persistence PASS
-- Safety: DEMO/local-only; no Meta/Gemini calls or credentials; startup gate requires `DEMO_MODE=true`
-- Known issues: none blocking
-- Architectural decisions: PostgreSQL-backed pg-boss; API startup migration; atomic status claim; UTC storage and Asia/Jakarta display; Nginx same-origin proxy
-- Next safe action: begin Phase 1 only after an authoritative auth specification/approval
-- Forbidden until then: public deployment, real platform actions, fake external endpoints, or adding credentials
+- Fase: 1 — Dashboard editorial / IMPLEMENTED / VERIFICATION PENDING — QA manual masih tersisa.
+- Branch: `main`; verified runtime commit: `7bea826` (`Phase 1: dashboard editorial dan kontrol admin`). Dokumentasi checkpoint terpisah.
+- Fase 0 tetap COMPLETE; data lama tidak dihapus.
+- Verifikasi parent: lint, typecheck, build lima workspace, 17 unit/behavior + 52 integrasi PostgreSQL (0 gagal/skip), audit npm 0, Docker same-origin smoke dan restart volume PASS.
+- Browser: editorial/draft/review/schedule/history/integrasi/demo/logout diperiksa memakai sesi fixture QA. Snapshot history baru bertahan setelah draft diedit; data lama berlabel metadata tidak lengkap. Bukti `docs/qa/phase1-history-snapshot.png`.
+- Review independen ulang: APPROVED untuk local simulation; tidak mengklaim exactly-once publikasi live.
+- Batas QA: password form login belum diisi lewat browser (auth diuji HTTP/integrasi); native confirm cancellation belum tervalidasi penuh (browser harness memakai konfirmasi fixture). Minor polish: kontras teks sekunder dan indikator integrasi.
+- Runtime utama: hanya DB sebelumnya; admin `.env` utama belum di-bootstrap. QA stack `threads-phase1-qa2` terbaru berjalan lokal pada 18082/15439; volume utama tidak disentuh.
+- Keamanan: DEMO_MODE wajib true, tidak ada Meta/Gemini/live; rahasia tidak masuk Git. Fase 2–6 belum dimulai, tidak push.
+- Next safe action: pengguna setup admin lokal dengan README lalu validasi manual login/confirm. Fase 2 hanya dimulai dengan persetujuan eksplisit.

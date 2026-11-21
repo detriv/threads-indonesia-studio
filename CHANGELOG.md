@@ -32,3 +32,10 @@
 - Updated dashboard wording and smoke assertions to verify the real editorial sample.
 - Re-ran lint, typecheck, 4 tests, build, audit, Docker smoke, browser UI flow, and persistence verification.
 - Verified runtime correction commit: `d7a1310`.
+
+## Fase 1 — Dashboard editorial (simulasi lokal)
+
+- Backend editorial, login admin, jadwal/outbox, worker simulasi lokal, riwayat dan status integrasi ditambahkan di working tree.
+- Pemulihan memperbaiki compile TypeScript, validasi set bobot tema, bootstrap admin dan urutan startup Compose. Smoke sekarang terautentikasi.
+- Runtime commit `7bea826`. Dashboard, backend dan persistensi E2E lulus; reviewer independen menyetujui tiga perbaikan. 17 unit + 52 integrasi PASS; batas QA manual di `AGENT_STATE.md`.
+- Snapshot riwayat immutable dan rekonsiliasi review memakai migrasi additive 003/004; kuota jadwal konkuren diserialisasi untuk satu akun. Lihat `WORKLOG.md`.

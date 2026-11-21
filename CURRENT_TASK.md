@@ -1,15 +1,11 @@
 # CURRENT TASK
 
-- Phase: 0 — fondasi dan alur simulasi end-to-end
-- Objective: deliver and verify the complete local demo stack
-- Status: COMPLETE
-- Done: monorepo; validated editorial payload; PostgreSQL migration/repository; Fastify API; pg-boss worker; React dashboard; Compose; documentation; automated quality gates; Docker smoke; browser UI flow; restart persistence
-- In progress: none
-- Remaining: none for Phase 0
-- Files: see repository tree and `CHANGELOG.md`
-- Last tests: 3 files / 4 tests passed
-- Last build: all five workspaces passed
-- Last Docker state: web/api/worker/db healthy; persisted action remained after stack recreation; corrected smoke action `206dcdb4-e376-4377-b415-266e9f6ab7a4` completed with editorial sample
-- Verified runtime commit: `d7a1310`; documentation checkpoint follows separately
-- Next exact action: request/receive Phase 1 authentication specification before changing runtime behavior
-- Out of scope: Meta/Gemini integrations, real Threads actions, production hosting
+- Fase: 1 — Dashboard editorial.
+- Status: IMPLEMENTED / VERIFICATION PENDING. Kode simulasi lokal lulus gates; QA manual login/confirm masih tersisa.
+- Verified runtime commit: `7bea826`; documentation checkpoint terpisah.
+- Done: login/logout/session/CSRF/rate-limit, empat tema/porsi editable, gaya/catatan/topik/batas, draft/edit/lock/review, jadwal/outbox/version/cancel/pause, riwayat snapshot immutable, status integrasi jujur, UI Indonesia dan WIB.
+- Review blockers: ketiganya fixed dan disetujui reviewer ulang: renewed trend review gate, kuota konkuren, immutable history.
+- Tests/build: 17 unit + 52 integrasi PASS, lint/typecheck/build/audit PASS; Docker smoke/restart dan browser fixture PASS.
+- QA limits: form password browser dan konfirmasi native belum fully exercised; login/session diuji HTTP dan PostgreSQL. Tidak ada klaim uji akun eksternal.
+- Next exact action: setup admin lokal via `npm run hash-password`, jalankan stack utama dan validasi manual login serta konfirmasi pembatalan. Tunggu izin sebelum Fase 2 Gemini.
+- Out of scope: deployment publik, Meta/Gemini live, posting nyata, push Git.

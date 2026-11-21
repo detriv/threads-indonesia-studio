@@ -25,4 +25,11 @@
 
 ## Batas Phase 0
 
-Tidak ada autentikasi, integrasi Meta, Gemini, token eksternal, penjadwalan publik, atau aksi nyata. Deployment internet tidak didukung sampai Phase 1 auth selesai.
+Pada checkpoint Fase 0, dashboard hanya demo lokal tanpa autentikasi.
+
+## Fase 1 — Dashboard editorial
+
+- Akses lokal: satu admin di-bootstrap dengan hash Argon2id; sesi opaque disimpan dengan hash SHA-256 di PostgreSQL, cookie sesi `HttpOnly`/`SameSite=Lax`, header CSRF untuk mutasi, dan rate limit login in-memory. Bukan konfigurasi deploy publik.
+- Tema, contoh suara, catatan pengalaman pemilik, topik review, pengaturan format dan batas harian, draft, dan jadwal tersimpan di PostgreSQL. Draft tren memerlukan sumber/waktu/relevansi dan review. Status draft terpisah dari eksekusi.
+- Mutasi jadwal dan outbox berada dalam transaksi yang sama. Dispatcher mengirim ID + versi jadwal ke pg-boss; worker mengecek status, versi, jeda, dan batas. Hanya satu penyelesaian lokal dapat tersimpan untuk satu versi jadwal.
+- Adapter lokal menghasilkan `sim-*` dan `publishedUrl: null`. Fase 1 tidak mengirim post, reply, atau request ke Meta/Gemini. Worker menunggu health API (migrasi dan seed selesai); health PostgreSQL memerlukan listener TCP, bukan socket sementara dari proses init image.
