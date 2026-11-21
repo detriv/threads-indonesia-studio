@@ -35,7 +35,7 @@
 
 ## Fase 1 — Dashboard editorial (simulasi lokal)
 
-- Backend editorial, login admin, jadwal/outbox, worker simulasi lokal, riwayat dan status integrasi ditambahkan di working tree.
+- Backend editorial, login admin, jadwal/outbox, worker simulasi lokal, riwayat dan status integrasi tersimpan pada runtime commit `7bea826`.
 - Pemulihan memperbaiki compile TypeScript, validasi set bobot tema, bootstrap admin dan urutan startup Compose. Smoke sekarang terautentikasi.
-- Runtime commit `7bea826`. Dashboard, backend dan persistensi E2E lulus; reviewer independen menyetujui tiga perbaikan. 17 unit + 52 integrasi PASS; batas QA manual di `AGENT_STATE.md`.
+- Runtime commit `7bea826`. Dashboard, backend dan persistensi E2E lulus; reviewer independen menyetujui tiga perbaikan. 17 unit + 52 integrasi PASS; QA manual pengguna juga PASS; Fase 1 COMPLETE.
 - Snapshot riwayat immutable dan rekonsiliasi review memakai migrasi additive 003/004; kuota jadwal konkuren diserialisasi untuk satu akun. Lihat `WORKLOG.md`.

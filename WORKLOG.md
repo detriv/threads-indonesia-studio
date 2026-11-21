@@ -230,3 +230,9 @@ PASS: restart tanpa hapus volume; sesi, aksi demo, draft, gaya, dan hasil simula
 - Commit runtime: `7bea826` — `Phase 1: dashboard editorial dan kontrol admin`; tidak push.
 - Implementasi simulasi lokal telah diverifikasi otomatis, HTTP E2E/persistensi, dan browser fixture yang dijelaskan di atas; fase belum ditandai COMPLETE karena QA manual masih tersisa. Batas input password browser dan modal native bukan diklaim PASS; keduanya disisakan untuk validasi manual operator. Main `.env` belum punya admin; gunakan README untuk bootstrap.
 - Dokumentasi disinkronkan dalam commit terpisah. Fase 2 tidak dimulai tanpa izin. QA stack pada 18082 dipertahankan untuk pemeriksaan; DB utama/data tidak dihapus.
+
+## Validasi manual pengguna — Fase 1 COMPLETE
+
+Pada 2026-11-21 WIB pengguna menyatakan: “oke semua test ini sudah saya coba manual dan berhasil”. Ini menutup checklist yang diberikan: password salah ditolak, login benar membuka dashboard, refresh mempertahankan sesi, buat draft/jadwal besok, Cancel pada dialog mempertahankan jadwal, OK membatalkan jadwal, logout dan refresh kembali ke login. Sumber bukti: laporan langsung pengguna, bukan klaim agent mengamati ulang browser.
+
+Task 4 ditandai selesai. Fase 1 COMPLETE untuk cakupan simulasi lokal, runtime commit tetap `7bea826`; tidak ada perubahan kode, pengujian otomatis tidak diulang untuk pembaruan dokumentasi saja. Tidak push dan tidak memulai Fase 2 tanpa izin eksplisit.
