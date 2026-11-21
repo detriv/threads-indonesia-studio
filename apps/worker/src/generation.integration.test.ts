@@ -7,7 +7,7 @@ import { resetTestDatabase,truncateAll } from '@threads-id/db/testing';
 import { EditorialRepository,GenerationRepository,DraftRepository,ScheduleRepository } from '@threads-id/db';
 import { randomUUID } from 'node:crypto';
 import { processGeneration } from './generation-processor.js';
-import { simulateGeneration } from './generation-provider.js';
+import { simulateGeneration,callGemini } from './generation-provider.js';
 let pool:pg.Pool; let repo:GenerationRepository; let editorial:EditorialRepository;
 beforeAll(async()=>{pool=await resetTestDatabase();repo=new GenerationRepository(pool);editorial=new EditorialRepository(pool);});
 beforeEach(async()=>{await truncateAll(pool);await editorial.seedDefaults();});
@@ -16,6 +16,36 @@ async function submit(purpose='TRY_THEME', dailyLimit=20) {
  const theme=(await editorial.listThemes())[0]!;
  return repo.submit(randomUUID(),{purpose,themeId:theme.id,format:'OBSERVASI_PENDEK'}, {provider:'SIMULATION',model:'simulation-v1',dailyLimit});
 }
+it.each([true,false])('mock transport teks Coba tema persisted atomik (valid=%s), bukan live Gemini',async valid=>{
+ const theme=(await editorial.listThemes())[0]!;
+ const r=await repo.submit(randomUUID(),{purpose:'TRY_THEME',themeId:theme.id},{provider:'GEMINI',model:'fixture-text-model',dailyLimit:20});
+ const texts=['Chat singkat.\n\nMikir balasannya lama.','Kebiasaan menunda balasan kadang bukan soal sibuk, tapi energi untuk memulai percakapan.','Niat membalas besok berubah jadi minggu depan.'];
+ const formats=['OBSERVASI_PENDEK','BAHASAN_LEBIH_DALAM','OBSERVASI_PENDEK'];
+ const text=texts.map((t,i)=>`<<<DRAFT_${i+1}_${formats[i]}>>>\n${t}\n<<<END_DRAFT_${i+1}>>>`).join('\n');
+ let calls=0;
+ await processGeneration(r.id,repo,(i,c,m)=>callGemini(i,c,m,'fixture-only',async()=>{
+  calls++;
+  return new Response(JSON.stringify({modelVersion:'fixture-text-model-001',usageMetadata:{promptTokenCount:10,candidatesTokenCount:20,totalTokenCount:30},candidates:[{finishReason:'STOP',content:{parts:[{text:valid?text:'invalid section fixture - never log raw'}]}}]}));
+ }));
+ expect(calls).toBe(1);
+ const saved=await repo.get(r.id);
+ const attempts=(await pool.query('SELECT * FROM generation_attempts WHERE request_id=$1',[r.id])).rows;
+ expect(attempts).toHaveLength(1);
+ expect((await pool.query('SELECT * FROM schedule_entries')).rowCount).toBe(0);
+ if(valid){
+  expect(saved).toMatchObject({status:'COMPLETED',actual_model:'fixture-text-model-001',usage:{promptTokens:10,outputTokens:20,totalTokens:30}});
+  expect(saved.draft_ids).toHaveLength(3);
+  const drafts=new DraftRepository(pool);
+  const persistedDrafts=await Promise.all(saved.draft_ids.map(id=>drafts.get(id)));
+  expect(persistedDrafts.map(d=>({text:d!.text,format:d!.format}))).toEqual(texts.map((text,index)=>({text,format:formats[index]})));
+  expect(attempts[0].actual_model).toBe('fixture-text-model-001');
+ }else{
+  expect(saved).toMatchObject({status:'FAILED',error_code:'INVALID_OUTPUT',draft_ids:[],usage:null,actual_model:null});
+  expect(attempts[0].error_code).toBe('INVALID_OUTPUT');
+  expect((await pool.query('SELECT * FROM drafts')).rowCount).toBe(0);
+  expect(JSON.stringify(saved)+JSON.stringify(attempts)).not.toContain('never log raw');
+ }
+});
 it('Coba tema durable menyimpan tiga draft tanpa jadwal dan idempoten pada worker konkuren',async()=>{
  const r=await submit();
  await Promise.all([processGeneration(r.id,repo,simulateGeneration),processGeneration(r.id,repo,simulateGeneration)]);

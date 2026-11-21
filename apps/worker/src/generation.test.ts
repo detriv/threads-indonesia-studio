@@ -21,20 +21,22 @@ it('Coba tema menghasilkan tepat tiga variasi dengan suara akun sebagai data', a
   expect(new Set(result.output.drafts.map(d => d.format)).size).toBe(2);
   expect(result.usage).toBeNull();
 });
-it('REST resmi memakai header key, JSON schema, parts dan usageMetadata tanpa klaim live', async () => {
+it('REST resmi menerima teks multiline dengan metadata milik aplikasi, bukan JSON schema', async () => {
   const input = { purpose: 'SHORT' as const, themeId: 'a', format: 'OBSERVASI_PENDEK' as const, instruction: '', evidence: null, personalSourceId: null, draftId: null, expectedVersion: null };
   let request: {url:string;init:RequestInit}|undefined;
   const transport:typeof fetch=async (url,init)=>{
     request={url:String(url),init:init!};
-    return new Response(JSON.stringify({modelVersion:'configured-model-001',candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({drafts:[{text:'Niat buka chat sebentar, malah baca ulang obrolan kemarin.',format:'OBSERVASI_PENDEK'}]})}]}}],usageMetadata:{promptTokenCount:41,candidatesTokenCount:24,totalTokenCount:65}}),{status:200});
+    return new Response(JSON.stringify({modelVersion:'configured-model-001',candidates:[{finishReason:'STOP',content:{parts:[{text:'Niat buka chat sebentar.\n\nMalah baca ulang obrolan kemarin.'}]}}],usageMetadata:{promptTokenCount:41,candidatesTokenCount:24,totalTokenCount:65}}),{status:200});
   };
   const r=await callGemini(input,context,'configured-model','fixture-key',transport);
   expect(request!.url).toBe('https://generativelanguage.googleapis.com/v1beta/models/configured-model:generateContent');
   expect(request!.url).not.toContain('fixture-key');
   expect(new Headers(request!.init.headers).get('x-goog-api-key')).toBe('fixture-key');
   const body=JSON.parse(request!.init.body as string);
-  expect(body.generationConfig.responseMimeType).toBe('application/json');
-  expect(body.generationConfig.responseJsonSchema.properties.drafts).toBeDefined();
+  expect(body.generationConfig.responseMimeType).toBe('text/plain');
+  expect(body.generationConfig).not.toHaveProperty('responseJsonSchema');
+  expect(body.generationConfig).not.toHaveProperty('responseSchema');
+  expect(r.output.drafts).toEqual([{text:'Niat buka chat sebentar.\n\nMalah baca ulang obrolan kemarin.',format:'OBSERVASI_PENDEK'}]);
   expect(r.usage).toEqual({promptTokens:41,outputTokens:24,totalTokens:65});
   expect(r.actualModel).toBe('configured-model-001');
 });
@@ -66,7 +68,7 @@ it.each([
  ['429','RATE_LIMIT',async()=>new Response('secret-provider-body',{status:429})],
  ['timeout','TIMEOUT',async()=>{throw new DOMException('secret timeout detail','TimeoutError');}],
  ['safety','SAFETY',async()=>new Response(JSON.stringify({promptFeedback:{blockReason:'SAFETY'}}))],
- ['invalid JSON','INVALID_OUTPUT',async()=>new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:'not json'}]}}]}))],
+ ['empty text','INVALID_OUTPUT',async()=>new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:' \n '}]}}]}))],
  ['HTTP failure','PROVIDER',async()=>new Response('secret',{status:500})]
 ] as const)('provider %s menghasilkan kode aman %s',async(_name,code,transport)=>{
  await expect(callGemini(shortInput,context,'configured-model','fixture-key',transport)).rejects.toThrow(new RegExp(`^${code}$`));
