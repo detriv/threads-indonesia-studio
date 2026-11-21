@@ -2,6 +2,15 @@
 
 Fase 1 tetap COMPLETE (`7bea826`). Fase 3 belum dimulai. Tidak ada publikasi/reply Meta live. `.env`/admin/volume utama tidak diubah oleh implementasi ini.
 
+## Klarifikasi transport teks — checkpoint terbaru (belum commit)
+
+Gemini di aplikasi menerima prompt/chat dan mengembalikan **teks draft/caption**, bukan membuat post Threads. Endpoint tetap REST `generateContent`, bukan browser scraping atau Interactions. HTTP request/envelope Gemini tetap JSON seperti protokol resminya; `generationConfig.responseMimeType=text/plain`, tanpa `responseJsonSchema`/`responseSchema`, dan isi `parts.text` tidak di-JSON.parse. Tidak ada SDK/service baru.
+
+- IDEAS/SHORT/DEEP/REVISE: satu teks biasa, newline/paragraf dipertahankan, trim batas luar, 1–500 karakter. Format ditetapkan aplikasi dari purpose/input; sumber/provenance/status tetap dari input tervalidasi/repository, bukan metadata model.
+- TRY_THEME: **satu provider call per attempt** menghasilkan satu respons teks dengan tepat3bagian berurutan pada delimiter baris sendiri: `<<<DRAFT_1_OBSERVASI_PENDEK>>>` … `<<<END_DRAFT_1>>>`, `<<<DRAFT_2_BAHASAN_LEBIH_DALAM>>>` … `<<<END_DRAFT_2>>>`, `<<<DRAFT_3_OBSERVASI_PENDEK>>>` … `<<<END_DRAFT_3>>>`. Model hanya mengisi teks; aplikasi menetapkan2pendek+1detail. Bukan3call tersembunyi. Tidak menambah repair/retry/fallback provider call. Crash recovery lama tetap mungkin mengulang attempt dan ditandai UNKNOWN, bukan exactly-once billing.
+- Parser strict menolak pembuka/penutup tambahan, bagian kurang/lebih/urut atau label salah, delimiter bersarang/berdempetan satu baris, teks kosong/>500, normalized duplicate; CRLF diterima dan paragraf utuh. Ordinary purpose menolak delimiter TRY_THEME. Output invalid → FAILED/INVALID_OUTPUT terlihat,0draft baru, bukan partial success. STOP/safety, usage/modelVersion, key header server-only dan error aman tanpa raw body tetap.
+- Voice/contoh tema/ownerNote terpilih/original/evidence tetap prompt data; tanpa pengalaman/sumber karangan. Quota/idempotensi, lock/version/provenance, invalidasi approval/backup dan trend review/jadwal tidak dilonggarkan. TRY_THEME tetap tanpa jadwal. Simulasi tetap independen/berlabel, tidak memakai mock provider sebagai bukti live.
+
 ## Jalur pengguna
 
 Buka **Draft** atau **Tema & Gaya → Konten Gemini**. Pilih tema/fungsi: Ide konten, Post pendek, Bahasan lebih dalam, Revisi, atau **Coba tema**. Coba tema sukses menyimpan **tepat tiga draft berbeda setelah normalisasi Unicode NFKC, whitespace dan huruf kecil**, wajib campuran observasi pendek/bahasan lebih dalam reguler (tidak boleh semua satu format atau mengandung tren), dalam satu transaksi; tidak pernah membuat jadwal. Fungsi lain menyimpan satu draft (IDEAS berupa ide konkret yang perlu dirapikan). Revisi menarget ID+versi yang ditampilkan; bukan menimpa draft lain. Catatan pemilik opsional harus dipilih eksplisit. Semua contoh suara akun dan contoh tema masuk prompt sebagai JSON data, bukan instruksi. Simulation fixture mengikuti pilihan kata ganti `gue`/`aku` dan tema; bukan klaim kualitas Gemini live.
@@ -17,7 +26,7 @@ Default aman tanpa key: `GENERATION_PROVIDER=simulation`, `GEMINI_ALLOW_OUTBOUND
 Untuk operator yang sudah memberi izin terpisah menjalankan AI eksternal:
 
 - Simpan key sendiri melalui secret/env server, **jangan chat**. `GEMINI_API_KEY` hanya dikirim Compose ke worker, bukan API/web/VITE bundle.
-- Set `GENERATION_PROVIDER=gemini`, `GEMINI_ALLOW_OUTBOUND=true`, dan model eksplisit yang benar-benar tersedia pada akun serta mendukung `generateContent`/structured output.
+- Set `GENERATION_PROVIDER=gemini`, `GEMINI_ALLOW_OUTBOUND=true`, dan model eksplisit yang benar-benar tersedia pada akun serta mendukung `generateContent` dengan respons teks biasa. Tidak memerlukan dukungan JSON schema output.
 - `GEMINI_MODEL` fallback bersama; override per fungsi `GEMINI_MODEL_IDEAS`, `_SHORT`, `_DEEP`, `_REVISE`, `_TRY_THEME`. Nilai kosong menggunakan fallback. Tidak ada model live default. Model disnapshot saat request diterima.
 - Dokumentasi structured-output yang di-fetch langsung saat implementasi memberi contoh `gemini-4-hydrogen` (contoh Interactions API pada halaman yang berubah). **Itu contoh dokumentasi, bukan jaminan model tersedia/kompatibel generateContent pada akun ini.** Jangan menganggap daftar/model dari search atau dokumen lama sebagai bukti availability. Integrasi ini memakai REST generateContent yang masih didokumentasikan; uji live tertunda sampai operator memilih model/key dan memberi izin.
 - Key/model/izin outbound yang tidak lengkap menghasilkan CONFIG dan kegagalan terlihat; **tidak** diam-diam dialihkan ke simulasi. Nama provider yang salah ditolak.
@@ -32,7 +41,7 @@ Compose tetap empat service. Startup API menerapkan migrasi additive/idempotent 
 
 Revisi memeriksa unlocked, versi, status, tema/format dan provenance pada penerimaan; saat commit kembali memakai settings → draft → schedule locks serta versi/lock terbaru. Edit manual/lock-toggle selama AI berjalan menyebabkan CONFLICT tanpa menimpa pemilik. Saat commit, provenance personalSourceId/tema/format dan bukti tren dibandingkan lagi di bawah draft row lock terhadap snapshot request: penghapusan catatan pemilik lewat FK SET NULL (yang tidak menaikkan versi) juga menghasilkan CONFLICT, bukan menulis output berdasarkan sumber yang sudah hilang. Policy invalidasi jadwal, immutable execution snapshots Fase 1 tetap digunakan. Manual editor mengirim expectedVersion; backward-compatible API patch tanpa versi tetap diterima untuk klien Fase 1, tetapi revisi AI selalu wajib versi.
 
-`generation_attempts` mencatat tiap percobaan provider/model, token jika tersedia, actual model, hasil/error aman dan biaya opsional. Response JSON divalidasi ketat jumlah, format, field dan panjang sebelum persist. HTTP resmi menggunakan header `x-goog-api-key`, bukan query URL. Timeout 45 detik, response non-STOP/JSON invalid/safety/429 terlihat dengan pesan tetap, tidak mencetak body provider atau rahasia. Tidak ada dependency/SDK baru; native fetch Node 24 dan Zod yang sudah dipin.
+`generation_attempts` mencatat tiap percobaan provider/model, token jika tersedia, actual model, hasil/error aman dan biaya opsional. Envelope HTTP Gemini tetap JSON; hanya `candidates.content.parts.text` yang merupakan teks draft biasa, bukan objek JSON buatan model. Aplikasi menetapkan metadata lalu memvalidasi jumlah, format, distinct dan panjang sebelum persist. HTTP resmi menggunakan header `x-goog-api-key`, bukan query URL. Timeout 45 detik, response non-STOP/teks atau delimiter invalid/safety/429 terlihat dengan pesan tetap, tidak mencetak body provider atau rahasia. Tidak ada dependency/SDK baru; native fetch Node 24 dan Zod yang sudah dipin.
 
 ## Dokumentasi resmi yang benar-benar di-fetch/read
 
@@ -58,7 +67,7 @@ node scripts/phase2-smoke.mjs
 
 Smoke membuat project unik dan port default **18086 / 15443**, tidak membaca `.env` utama, tidak menghapus volume; password QA acak hanya dipakai HTTP di harness. Jika port sudah dipakai, set `PHASE2_WEB_PORT` / `PHASE2_DB_PORT` ke port bebas. Evidence JSON/sesi browser fixture 0600 ditulis ke TMPDIR scratch. Stack ditinggalkan running untuk review; stop memakai `docker compose --env-file <path> -p <project> down`, **tanpa `-v`**. Sesi browser smoke bukan bukti input login melalui form.
 
-Live Gemini **PENDING** karena key belum tersedia dan outbound belum diizinkan. Checkpoint runtime `6ea5314` sudah diverifikasi parent dan disetujui reviewer independen. Fase 2 belum COMPLETE karena uji Gemini nyata masih tertunda. Posting Meta/reply/grounding/gambar tetap di luar scope.
+Live Gemini **PENDING**: uji terbatas sebelumnya gagal PROVIDER/INVALID_OUTPUT dan diagnostic Hydrogen timeout45detik (lihat sejarah di bawah). Adaptasi teks bukan bukti root cause sudah diperbaiki; panggilan baru memerlukan izin/budget baru. Checkpoint runtime `6ea5314` sudah diverifikasi parent dan disetujui reviewer independen. Fase 2 belum COMPLETE karena uji Gemini nyata masih tertunda. Posting Meta/reply/grounding/gambar tetap di luar scope.
 
 
 ## Uji Gemini nyata terbatas — 2026-11-22 WIB (belum berhasil)

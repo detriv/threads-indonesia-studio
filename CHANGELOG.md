@@ -1,5 +1,16 @@
 # Changelog
 
+## Checkpoint terbaru — adaptasi teks prompt/chat (working tree, belum commit)
+
+Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase2 IN PROGRESS / IMPLEMENTED — LIVE VERIFICATION PENDING**, parent review adaptasi teks belum dilakukan. HEAD `61bf136`, runtime committed sebelumnya `6ea5314`; perubahan sekarang belum commit/push.
+
+- Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.
+- Final gates aktual: `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0, **62unit/behavior+71integrasi PostgreSQL**,0gagal/skip,5workspace build/typecheckPASS,audit0. Tests transport adalah mock lokal, bukan Gemini nyata. RED/GREEN rinci ada di WORKLOG.
+- Isolated simulation smoke fresh+full restart exit0: project `threads-phase2-qa-1a377dde`, **18092/15449**, evidence `/home/deva/.hermes/cache/scratch/threads-phase2-vJGVZK/evidence.json`;7request/7attempt,0jadwal. API/worker QA direbuild lagi setelah hardening parser terakhir; SQL readback tetap7/7/0. Stack QA baru dibiarkanrunning; tidak hapus volume/ubah stack QA lama. Main8080 `/health`200/demo=true; tidak redeploy utama, tidak sentuh `.env`/admin/volume utama.
+- **0 panggilan outbound Gemini/Threads** pada adaptasi ini. Hydrogen sebelumnya FAILED/PROVIDER lalu diagnostic TIMEOUT45000ms tetap belum terjelaskan; perubahan teks bukan klaim memperbaiki root cause atau sukses live. Model/secret tidak diubah. Publikasi Threads API hanya Fase3 (belum dimulai).
+- Next exact action: parent inspeksi diff/parser/prompt, rerun critical transport+PostgreSQL tests dan readback QA evidence sebelum commit apa pun. Live berikut memerlukan izin/budget baru; jangan push/deploymain/lanjutFase3/markCOMPLETE. Tidak ada harness background; hanya stack QA running.
+
+
 ## Review blockers follow-up — tetap IN PROGRESS
 
 - Ketiga blocker reviewer diperbaiki: normalisasi-distinct/mix reguler Coba tema + validasi evidence selalu; approval reguler invalid setelah edit/revisi substantif; commit provenance guard terhadap FK source deletion meski versi tidak berubah.
@@ -94,3 +105,9 @@ Parent kemudian mengonfirmasi readbackDB FAILED/PROVIDER,0draft/0schedule dan se
 - **Total Hydrogen2 generateContent calls**:1application+1host diagnostic; budget habis. Tidak retry, fallback, model switch, atau Interactions. Host diagnostic tidak membuat requestDB/draft/jadwal dan bukan bukti aplikasi sukses. Tidak ada produksi code edits/commit/push/main deploy; konfigurasi dan secret tidak diubah pada diagnostic.
 - Evidence sanitized0600: `/home/deva/.hermes/cache/scratch/threads-hydrogen-diagnostic.json`; harness source sibling `threads-hydrogen-diagnostic.mjs`, guard file eksklusif mencegah rerun. Respons bila ada disanitasi literal key sebelum write; pada eksekusi ini tidak ada respons yang bisa direkam. Tests/build35+69/5workspace sebelumnya tetap bukti recovery, tidak diulang untuk perubahan dokumentasi saja.
 - Fase2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING / IN PROGRESS. Rekomendasi: parent baca evidence; periksa akses akun/model dan status layanan/jaringan secara read-only. Jangan menyimpulkan model tak tersedia atau mengganti API/model otomatis; panggilan generation berikut memerlukan izin/budget baru, bukan retry diam-diam. Tidak ada background diagnostic process.
+
+## Checkpoint respons teks Gemini
+
+- Runtime terbaru `98dcf15`: prompt API Gemini → jawaban teks biasa → draft; API Threads hanya publikasi pada Fase3, belum dimulai. Satu provider call per attempt; Coba tema tiga bagian teks tervalidasi dengan format dikelola aplikasi.
+- Parent full gates PASS:62unit+71integrasi PostgreSQL,0gagal/skip; lint/typecheck/build5workspace/audit0. Reviewer independen APPROVED dan39targeted provider tests PASS. Tidak ada outbound Gemini tambahan.
+- Simulasi/mock terverifikasi; uji live format baru PENDING. Hydrogen PROVIDER/timeout45s sebelumnya belum terdiagnosis/fixed. Main8080 belum diredeploy; tidak push. Review implementasi telah selesai; next exact action adalah uji live terbatas dengan persetujuan, bukan mengulang review yang sudah approved.

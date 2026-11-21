@@ -1,6 +1,6 @@
 # Roadmap
 
-Status kini: Fase 1 COMPLETE, Fase 2 **IN PROGRESS** (parent review dan live Gemini PENDING karena key/izin belum tersedia); Fase 3–6 belum dimulai. Lihat [konfigurasi dan bukti Fase 2](PHASE2.md).
+Status kini: Fase 1 COMPLETE, Fase 2 **IN PROGRESS** (adaptasi prompt/chat → teks draft/caption menunggu review parent; live Gemini belum berhasil, bukan klaim root cause Hydrogen diperbaiki); Fase 3–6 belum dimulai. Lihat [konfigurasi dan bukti Fase 2](PHASE2.md).
 
 | Fase | Hasil | Kriteria utama |
 |---|---|---|

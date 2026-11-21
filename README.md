@@ -1,6 +1,6 @@
 # Threads Automation Indonesia
 
-Dashboard editorial untuk satu admin dan satu akun Threads Indonesia, dengan fokus pada keseharian usia 20-an. **Fase 1 COMPLETE, Fase 2 IN PROGRESS**: generasi konten default simulasi, adapter Gemini resmi opt-in tersedia namun uji live tertunda (key/izin belum tersedia). Publikasi Meta tetap simulasi/nonaktif. Lihat [konfigurasi dan batas bukti Fase 2](docs/PHASE2.md). Status verifikasi ada di `PHASE_STATE.md`.
+Dashboard editorial untuk satu admin dan satu akun Threads Indonesia, dengan fokus pada keseharian usia 20-an. **Fase 1 COMPLETE, Fase 2 IN PROGRESS**: generasi konten default simulasi, adapter Gemini resmi opt-in menerima prompt/chat dan mengembalikan teks draft/caption; uji live belum berhasil. Metadata milik aplikasi; publikasi Threads API baru Fase3. Adaptasi teks bukan klaim memperbaiki kegagalan Hydrogen sebelumnya. Publikasi Meta tetap simulasi/nonaktif. Lihat [konfigurasi dan batas bukti Fase 2](docs/PHASE2.md). Status verifikasi ada di `PHASE_STATE.md`.
 
 ## Jalankan lokal
 

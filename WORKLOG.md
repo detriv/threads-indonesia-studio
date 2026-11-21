@@ -1,5 +1,47 @@
 # WORKLOG — Phase 0
 
+## Klarifikasi pengguna — prompt/chat Gemini menjadi teks draft/caption (working tree)
+
+Status **Fase2 IN PROGRESS / IMPLEMENTED — LIVE VERIFICATION PENDING**; review parent belum dilakukan. No commit/push/deploy main,0outbound Gemini/Threads. Hydrogen sebelumnya PROVIDER dan diagnostic45sTIMEOUT bukan root cause yang dibuktikan/diperbaiki di sini. `.env`, model, admin utama dan volume utama tidak disentuh.
+
+### Recovery dan lingkup
+
+- Inspeksi repo aktual: `git status --short` clean, HEAD `61bf136`, runtime terdahulu `6ea5314`. Baca continuity/TDD skills, state/log/docs aktual, kontrak dan provider/tests, roadmap/spec yang tersedia di repo. `npm run test:all && npm run build` exit0:35unit+69PostgreSQLintegration,0failed/skip,5workspacebuildPASS sebelum perubahan.
+- Klarifikasi: GeminiAPI menerima prompt/chat, memberi teks untuk draft/caption. ThreadsAPI publish baruFase3. REST generateContent tetap sesuai; structured JSON sebelumnya pilihan implementasi, bukan syarat domain. Tidak mengganti endpoint ke publikasi, scraping browser atau Interactions.
+
+### RED → GREEN aktual (transport mock lokal saja)
+
+1. Ubah test REST resmi lebih dahulu agar fixture berisi teks multiline dan mengharapkan MIME text/plain/tanpa schema, app-owned format, usage41/24/65 dan actualmodel fixture. `npm test -- apps/worker/src/generation.test.ts -t 'REST resmi'` RED exit1,1failed/11skipped: INVALID_OUTPUT karena parser lama JSON.parse. Hapus responseJsonSchema transport, MIMEtext/plain dan envelope internal app-owned; command sama GREEN exit0,1passed/11skipped.
+2. Buat `generation-text.test.ts` tracer Coba tema satu respons dengan3delimiter/purpose-app-format dan promptcontoh3section. `npm test -- apps/worker/src/generation-text.test.ts` RED exit1,1failed INVALID_OUTPUT (masih wrapper1draft). Implementasi parser strict ordered sections + prompt text-only berbeda untuk TRY_THEME vs ordinary. Run gabungan dua testfiles: Coba temaGREEN;12passed/1failed karena test lama menuntut literal 'not json' invalid. Itu kontrak lama yang disengaja berubah: ubah fixture error lama menjadi teks whitespace kosong (bukan melemahkan validasi kosong). Regression malformed/count/length/distinct/nonSTOP/safety/parts/CRLF/ordinarypurpose ditambahkan untuk mengunci guard yang sudah ada.
+3. Tracer single-purpose dengan envelope delimiter TRY_THEME ditulis sebelum guard. `npm test -- apps/worker/src/generation-text.test.ts -t 'single-purpose'` RED exit1,1failed/25skipped karena envelope tersimpan sebagai caption. Tambah penolakan reserved DRAFT delimiter pada ordinary purpose. Full gates setelahnya exit0:61unit+71integration; lint/typecheck/build/audit0PASS.
+4. Hardening baris delimiter: tambahkan kasus closing dan opening section berdempetan satu baris. `npm test -- apps/worker/src/generation-text.test.ts -t 'adjacent delimiter'` RED exit1,1failed/26skipped: parser menerima3draft. Tambah pengecekan tail closing delimiter harus newline/end (whitespace horizontal diizinkan). Full final gates di bawah GREEN;27test texttransportpassed.
+
+### Hasil implementasi dan regression
+
+- Satu `fetch` per provider attempt, tidak ada3call/repair/retry tersembunyi. NonTRY satu teks1–500char; TRY3teks2pendek+1detail, delimiter strict dengan body multiline/CRLF, normalized-distinct validator lama. Aplikasi menetapkanformat/sumber/provenance/status. GenerationResult internal tetap bertipe/tervalidasi; hanya transport model berubah, bukan schemaDB/API domain.
+- Safety/STOP, thought filtering, usageMetadata/modelVersion, timeout45s, key headerworker-only, error sanitized tidak rawproviderbody tetap. Prompt masih membawa voices/themeexamples/ownerNote/original/evidence terpilih sebagai data; larangan pengalaman/sumber karangan sama. Simulation tidak memanggil parser/transportmock dan tetapberlabel.
+- Tambah2integrasi PostgreSQL yang menjalankan adapter asli `callGemini` via injected fetchfixture → processGeneration → repository. Valid response persisted3teks persis/mixedformat/usage10+20=30/actualmodel fixture; invalidsection FAILED/INVALID_OUTPUT,0draft,rawfixture tidak disimpan, satuattempt/call,0jadwal. Ini **bukan liveGemini**. Guard quota/idempotensi/revision-lock/version/source-deletion/approval-backup/trend-review/schedule yang lama tetap rerun seluruhsuite.
+
+### Quality gates terakhir aktual
+
+`npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0 setelah hardening baris: **62unit/behavior (9files)+71PostgreSQLintegration (10files),0failed/skipped**; typecheck/build5workspacePASS,lint0warnings,audit0. Tests prebuild sharedpackages sehingga tidak memakai diststale. Tidak menambah dependency/migration/service/SDK/UI/Phase3.
+
+### Smoke simulation terisolasi dan readback
+
+- Port availability dicek bind socket:18092/15449free. `PHASE2_WEB_PORT=18092 PHASE2_DB_PORT=15449 node scripts/phase2-smoke.mjs` exit0: project `threads-phase2-qa-1a377dde`,4servicehealthy,freshvolume+full down/up tanpa-v,4themeTRY_THEME masing3draft,contoh500char normalizedunique/mixedregular,APPROVED→AIrevision→DRAFT,queuedrecoveryPASS,7request/7attempt,0schedule,usage/costnull. Script memaksa simulation/outboundfalse/keykosong, tidak membacaenvutama. Ini tidak menguji Gemini live atau mengklaim parser dengan simulation.
+- Evidence `/home/deva/.hermes/cache/scratch/threads-phase2-vJGVZK/evidence.json`; envFile sibling `compose.env`, browserfixture sibling0600 (bukan loginformbrowser). Tidak ada browser baru pada follow-up ini, UI tidak diubah.
+- IDs:4theme requests `dd8b6971-b9d4-4ffb-8648-7c872504ec00`, `47cfa1d0-29b3-477e-9dc8-b1c842d0bb79`, `a59080e2-2b9f-454b-bbcb-9d70c342d9b3`, `6a8c039f-f285-4c91-a303-8ba3961c898b`;longexample `be8c651c-9f0b-402c-a685-3986f36e5f97`;revision `3952ce7d-8813-4869-90db-16ac81270936`;recovered `c26e0772-f6df-4fad-b218-eabf75b2358a`;revisiondraft `64a17f2c-74af-4b5a-9602-a6cb61c2af97`.
+- Setelah final delimiterhardening, `docker compose --env-file /home/deva/.hermes/cache/scratch/threads-phase2-vJGVZK/compose.env -p threads-phase2-qa-1a377dde up -d --build --wait worker` exit0: hanya QA baruAPI/workerrebuilt/recreated. SQL readback requests7/attempts7/schedules0. Main8080 read-only `/health`HTTP200/demo=true. OldQA/main tidak diredeploy; semua volumepreserved. Docker build warnings existing ESLintunsupported/esbuildinstallscript tidak menghalangi build, tidak disembunyikan/diklaim warningsnol untuk npmci.
+
+### File manifest / handoff
+
+- Production modified hanya `apps/worker/src/generation-provider.ts`.
+- Tests modified `apps/worker/src/generation.test.ts`, `apps/worker/src/generation.integration.test.ts`; created `apps/worker/src/generation-text.test.ts`.
+- Docs modified `README.md`, `docs/PHASE2.md`, `docs/ROADMAP.md`, `AGENT_STATE.md`, `CURRENT_TASK.md`, `PHASE_STATE.md`, `CHANGELOG.md`, `WORKLOG.md`. Histori live/handoff sebelumnya dipertahankan; checkpointterbaru membedakan mock/simulation/livepending.
+- Tidak commit/push. Tidak ada harnessbackground; QA baru running18092 untuk reviewparent. Stop hanya projectbaru memakai composeenv/project di atas tanpa-v bila diminta. Next exactaction: parent independentreview diff+criticaltests+evidence sebelum commit; izin/budgetbaru wajib untuk panggilanlive berikut. JanganmarkCOMPLETE/deploymain/lanjutPhase3.
+
+## Histori checkpoint sebelumnya
+
 ## Tujuan
 
 Membangun fondasi lengkap Threads Automation Indonesia sebagai demo lokal: dashboard → Fastify API → PostgreSQL/pg-boss → worker idempoten → status/riwayat, tanpa Meta/Gemini/kredensial eksternal, lalu memverifikasi quality gates, E2E Docker, dan persistence setelah restart.
@@ -432,3 +474,9 @@ Parent kemudian mengonfirmasi readbackDB FAILED/PROVIDER,0draft/0schedule dan se
 - **Total Hydrogen2 generateContent calls**:1application+1host diagnostic; budget habis. Tidak retry, fallback, model switch, atau Interactions. Host diagnostic tidak membuat requestDB/draft/jadwal dan bukan bukti aplikasi sukses. Tidak ada produksi code edits/commit/push/main deploy; konfigurasi dan secret tidak diubah pada diagnostic.
 - Evidence sanitized0600: `/home/deva/.hermes/cache/scratch/threads-hydrogen-diagnostic.json`; harness source sibling `threads-hydrogen-diagnostic.mjs`, guard file eksklusif mencegah rerun. Respons bila ada disanitasi literal key sebelum write; pada eksekusi ini tidak ada respons yang bisa direkam. Tests/build35+69/5workspace sebelumnya tetap bukti recovery, tidak diulang untuk perubahan dokumentasi saja.
 - Fase2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING / IN PROGRESS. Rekomendasi: parent baca evidence; periksa akses akun/model dan status layanan/jaringan secara read-only. Jangan menyimpulkan model tak tersedia atau mengganti API/model otomatis; panggilan generation berikut memerlukan izin/budget baru, bukan retry diam-diam. Tidak ada background diagnostic process.
+
+## Checkpoint respons teks Gemini
+
+- Runtime terbaru `98dcf15`: prompt API Gemini → jawaban teks biasa → draft; API Threads hanya publikasi pada Fase3, belum dimulai. Satu provider call per attempt; Coba tema tiga bagian teks tervalidasi dengan format dikelola aplikasi.
+- Parent full gates PASS:62unit+71integrasi PostgreSQL,0gagal/skip; lint/typecheck/build5workspace/audit0. Reviewer independen APPROVED dan39targeted provider tests PASS. Tidak ada outbound Gemini tambahan.
+- Simulasi/mock terverifikasi; uji live format baru PENDING. Hydrogen PROVIDER/timeout45s sebelumnya belum terdiagnosis/fixed. Main8080 belum diredeploy; tidak push. Review implementasi telah selesai; next exact action adalah uji live terbatas dengan persetujuan, bukan mengulang review yang sudah approved.
