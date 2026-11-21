@@ -20,7 +20,8 @@ const draftPatchSchema = z.object({
   sourceUrl: z.url().nullable().optional(),
   sourceTime: z.iso.datetime().nullable().optional(),
   relevanceNote: z.string().trim().min(1).nullable().optional(),
-  personalSourceId: z.uuid().nullable().optional()
+  personalSourceId: z.uuid().nullable().optional(),
+  expectedVersion: z.number().int().positive().optional()
 });
 const lockSchema = z.object({ locked: z.boolean() });
 const reviewSchema = z.object({ decision: z.enum(['APPROVE', 'REJECT']), note: z.string().trim().min(1).optional() });
@@ -78,7 +79,7 @@ export function registerDraftRoutes(app: FastifyInstance, drafts: DraftRepositor
     const parsed = draftPatchSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: 'Perubahan draft tidak valid', detail: parsed.error.issues });
     try {
-      return await drafts.update(request.params.id, parsed.data);
+      return await drafts.update(request.params.id, parsed.data, parsed.data.expectedVersion);
     } catch (error) {
       return draftErrorResponse(error, reply);
     }

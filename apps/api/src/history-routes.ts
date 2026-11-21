@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { generationConfig } from '@threads-id/db';
 import type { ScheduleRepository } from '@threads-id/db';
 import { contentFormatSchema, executionStatusSchema, PHASE1_INTEGRATION_STATUS } from '@threads-id/contracts';
 
@@ -19,5 +20,5 @@ export function registerHistoryRoutes(app: FastifyInstance, schedule: ScheduleRe
     return schedule.listExecutions(parsed.data);
   });
 
-  app.get('/api/integrations', async () => PHASE1_INTEGRATION_STATUS);
+  app.get('/api/integrations', async () => ({...PHASE1_INTEGRATION_STATUS,integrations:PHASE1_INTEGRATION_STATUS.integrations.map(item=>item.id!=='gemini'?item:{...item,mode:generationConfig('SHORT').provider==='SIMULATION'?'SIMULASI':'BELUM_TERHUBUNG',note:`Provider generasi: ${generationConfig('SHORT').provider}. Konfigurasi bukan bukti koneksi live terverifikasi. Konten Gemini pada halaman Draft menampilkan request/model/pemakaian/gagal dan cadangan; publikasi Meta tetap nonaktif.`})}));
 }

@@ -67,6 +67,12 @@ export class DraftRepository {
     return result.rows[0] ? mapDraft(result.rows[0]) : null;
   }
 
+  /** One statement eligibility snapshot; never schedule or mutate fallback. */
+  async getReadyFallback(id:string):Promise<Draft|null>{
+    const result=await this.pool.query<DraftRow>(`${SELECT} WHERE d.id=$1 AND d.status='APPROVED' AND NOT d.locked AND d.format<>'TREN_RELEVAN' AND t.active AND NOT EXISTS(SELECT 1 FROM schedule_entries s WHERE s.draft_id=d.id)`,[id]);
+    return result.rows[0]?mapDraft(result.rows[0]):null;
+  }
+
   async list(filter: DraftFilter = {}): Promise<Draft[]> {
     const conditions: string[] = [];
     const values: unknown[] = [];
@@ -79,10 +85,10 @@ export class DraftRepository {
   }
 
   /** Edit draft. Terkunci → ditolak keras di server; dibatalkan → ditolak; tren yang diedit kembali ke review. */
-  async update(id: string, patch: DraftPatch): Promise<Draft> {
-    const client = await this.pool.connect();
+  async update(id: string, patch: DraftPatch, expectedVersion?: number, transaction?: pg.PoolClient): Promise<Draft> {
+    const client = transaction ?? await this.pool.connect();
     try {
-      await client.query('BEGIN');
+      if (!transaction) await client.query('BEGIN');
       // Global Phase 1 lock order: settings -> draft -> schedule.
       await client.query('SELECT id FROM editorial_settings WHERE id = 1 FOR UPDATE');
       const current = await client.query<DraftRow>(`${SELECT} WHERE d.id = $1 FOR UPDATE OF d`, [id]);
@@ -90,6 +96,7 @@ export class DraftRepository {
       if (!row) throw new DraftStateError('Draft tidak ditemukan');
       if (row.locked) throw new DraftLockedError();
       if (row.status === 'CANCELLED') throw new DraftCancelledError();
+      if (expectedVersion !== undefined && row.version !== expectedVersion) throw new DraftStateError('CONFLICT');
       const format = patch.format ?? row.format;
       const next = {
         themeId: patch.themeId ?? row.theme_id,
@@ -100,8 +107,12 @@ export class DraftRepository {
         relevanceNote: patch.relevanceNote !== undefined ? patch.relevanceNote : row.relevance_note,
         personalSourceId: patch.personalSourceId !== undefined ? patch.personalSourceId : row.personal_source_id
       };
-      // Setiap perubahan isi draft tren mengembalikannya ke antrean review.
-      const status: DraftStatus = format === 'TREN_RELEVAN' ? 'IN_REVIEW' : row.status;
+      // Approval belongs to the reviewed content, not merely the draft ID.
+      const substantive = next.text !== row.text || next.themeId !== row.theme_id || format !== row.format
+        || next.sourceUrl !== row.source_url || next.relevanceNote !== row.relevance_note || next.personalSourceId !== row.personal_source_id
+        || (next.sourceTime ? new Date(next.sourceTime).getTime() : null) !== (row.source_time?.getTime() ?? null);
+      // Preserve the separate scheduled-version replacement policy below.
+      const status: DraftStatus = format === 'TREN_RELEVAN' ? 'IN_REVIEW' : row.status === 'APPROVED' && substantive ? 'DRAFT' : row.status;
       if (status === 'IN_REVIEW') {
         // Invalidate queued versions atomically. Approval never silently reactivates them.
         const active = await client.query<{ id: string; version: number }>(
@@ -124,20 +135,20 @@ export class DraftRepository {
           await client.query("INSERT INTO schedule_outbox (id, schedule_id, version, event, scheduled_at) VALUES ($1, $2, $3, 'UPSERT', $4)", [randomUUID(), entry.id, entry.version, entry.scheduled_at]);
         }
       }
-      await client.query('COMMIT');
+      if (!transaction) await client.query('COMMIT');
     } catch (error) {
-      await client.query('ROLLBACK');
+      if (!transaction) await client.query('ROLLBACK');
       throw error;
     } finally {
-      client.release();
+      if (!transaction) client.release();
     }
-    const draft = await this.get(id);
-    if (!draft) throw new DraftStateError('Draft tidak ditemukan');
-    return draft;
+    const result = await (transaction ?? this.pool).query<DraftRow>(`${SELECT} WHERE d.id = $1`, [id]);
+    if (!result.rows[0]) throw new DraftStateError('Draft tidak ditemukan');
+    return mapDraft(result.rows[0]);
   }
 
   async setLocked(id: string, locked: boolean): Promise<Draft | null> {
-    const result = await this.pool.query('UPDATE drafts SET locked = $2, updated_at = now() WHERE id = $1', [id, locked]);
+    const result = await this.pool.query('UPDATE drafts SET locked = $2, version = version + 1, updated_at = now() WHERE id = $1', [id, locked]);
     if ((result.rowCount ?? 0) === 0) return null;
     return this.get(id);
   }
@@ -151,7 +162,7 @@ export class DraftRepository {
       const current = await client.query<DraftRow>(`${SELECT} WHERE d.id = $1 FOR UPDATE OF d`, [id]);
       const row = current.rows[0];
       if (!row) throw new DraftStateError('Draft tidak ditemukan');
-      if (row.status !== 'IN_REVIEW') throw new DraftStateError('Hanya draft berstatus IN_REVIEW yang bisa direview');
+      if (row.status !== 'IN_REVIEW' && !(row.status === 'DRAFT' && row.format !== 'TREN_RELEVAN' && decision === 'APPROVE')) throw new DraftStateError('Hanya draft IN_REVIEW atau draft reguler DRAFT untuk persetujuan yang bisa direview');
       if (decision === 'APPROVE') {
         if (!trendSourcesComplete({ format: row.format, sourceUrl: row.source_url, sourceTime: row.source_time ? row.source_time.toISOString() : null, relevanceNote: row.relevance_note })) {
           throw new TrendSourcesError();

@@ -1,3 +1,5 @@
+import { registerGenerationRoutes } from './generation-routes.js';
+import type { GenerationRepository } from '@threads-id/db';
 import { randomUUID } from 'node:crypto';
 import Fastify from 'fastify';
 import type { FastifyServerOptions } from 'fastify';
@@ -26,6 +28,7 @@ export type AppDeps = {
   queue: Queue;
   auth: AuthLike;
   editorial?: EditorialRepository;
+  generation?: GenerationRepository;
   drafts?: DraftRepository;
   schedule?: ScheduleRepository;
   sessionTtlMs?: number;
@@ -71,6 +74,7 @@ export function buildApp(deps: AppDeps) {
   });
 
   app.get('/health', async () => ({ ok: true, service: 'api', demo: true }));
+  if (deps.generation) registerGenerationRoutes(app,deps.generation);
   if (deps.editorial) registerEditorialRoutes(app, deps.editorial);
   if (deps.editorial && deps.drafts) registerDraftRoutes(app, deps.drafts, deps.editorial);
   if (deps.schedule) registerScheduleRoutes(app, deps.schedule);

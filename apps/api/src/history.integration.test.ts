@@ -171,6 +171,8 @@ describe('riwayat + status integrasi (PostgreSQL)', () => {
       expect(integration.note.length).toBeGreaterThan(10);
     }
     expect(body.integrations.map((i: { id: string }) => i.id)).toEqual(['meta-threads', 'gemini']);
+    expect(body.integrations[1].note).toContain('Provider generasi');
+    expect(body.integrations[1].note).not.toContain('cakupan Phase 2');
     await app.close();
   });
 
