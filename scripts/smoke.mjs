@@ -10,7 +10,12 @@ for (let attempt = 0; attempt < 30; attempt += 1) {
   if (action.status === 'FAILED') throw new Error(`Worker gagal: ${action.error}`);
   await new Promise((resolve) => setTimeout(resolve, 500));
 }
-if (action?.status !== 'COMPLETED' || action.result?.simulatedAgeSeconds !== 20) throw new Error(`Aksi tidak selesai: ${JSON.stringify(action)}`);
+if (
+  action?.status !== 'COMPLETED'
+  || action.result?.editorialSample?.pillar !== 'KEBIASAAN_DIGITAL'
+  || action.result?.editorialSample?.format !== 'OBSERVASI_PENDEK'
+  || !action.result?.editorialSample?.text?.includes('cek jam')
+) throw new Error(`Aksi tidak selesai dengan payload editorial: ${JSON.stringify(action)}`);
 const history = await (await check(await fetch(`${base}/api/demo/actions`), 'history')).json();
 if (!history.some((item) => item.id === created.actionId)) throw new Error('Aksi tidak ditemukan di riwayat');
 console.log(JSON.stringify({ ok: true, actionId: created.actionId, status: action.status, historyCount: history.length }));

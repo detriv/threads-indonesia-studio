@@ -1,5 +1,5 @@
 import { PgBoss } from 'pg-boss';
-import { DEMO_JOB_NAME } from '@threads-id/contracts';
+import { DEMO_JOB_NAME, demoJobDataSchema } from '@threads-id/contracts';
 import { ActionRepository, createPool } from '@threads-id/db';
 import { processDemoAction } from './processor.js';
 
@@ -11,8 +11,8 @@ const repo = new ActionRepository(pool);
 const boss = new PgBoss({ connectionString });
 await boss.start();
 await boss.createQueue(DEMO_JOB_NAME);
-await boss.work<{ actionId: string }>(DEMO_JOB_NAME, async (jobs) => {
-  for (const job of jobs) await processDemoAction(job.data.actionId, repo);
+await boss.work(DEMO_JOB_NAME, async (jobs) => {
+  for (const job of jobs) await processDemoAction(demoJobDataSchema.parse(job.data), repo);
 });
 console.log('Worker DEMO siap.');
 await import('node:fs/promises').then(({ writeFile }) => writeFile('/tmp/worker-ready', 'ready\n'));

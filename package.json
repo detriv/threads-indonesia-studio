@@ -7,7 +7,7 @@
     "build": "npm run build -w @threads-id/contracts && npm run build -w @threads-id/db && npm run build -w @threads-id/api && npm run build -w @threads-id/worker && npm run build -w @threads-id/web",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "npm run build -w @threads-id/contracts && npm run build -w @threads-id/db && npm run typecheck -w @threads-id/contracts && npm run typecheck -w @threads-id/db && npm run typecheck -w @threads-id/api && npm run typecheck -w @threads-id/worker && npm run typecheck -w @threads-id/web",
-    "test": "vitest run",
+    "test": "npm run build -w @threads-id/contracts && npm run build -w @threads-id/db && vitest run",
     "smoke": "node scripts/smoke.mjs",
     "migrate": "npm run migrate -w @threads-id/db"
   },

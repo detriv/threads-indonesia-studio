@@ -24,7 +24,18 @@ describe('demo API', () => {
     expect(body).toMatchObject({ status: 'QUEUED', demo: true });
     expect(body.actionId).toMatch(/^[0-9a-f-]{36}$/);
     expect(d.repo.create).toHaveBeenCalledWith(body.actionId);
-    expect(d.queue.send).toHaveBeenCalledWith('demo.synthetic-age-20s', { actionId: body.actionId }, expect.any(Object));
+    expect(d.queue.send).toHaveBeenCalledWith(
+      'demo.synthetic-age-20s',
+      {
+        actionId: body.actionId,
+        sample: expect.objectContaining({
+          pillar: 'KEBIASAAN_DIGITAL',
+          format: 'OBSERVASI_PENDEK',
+          text: expect.stringContaining('cek jam')
+        })
+      },
+      expect.any(Object)
+    );
     await app.close();
   });
 

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import Fastify from 'fastify';
-import { DEMO_JOB_NAME } from '@threads-id/contracts';
-import type { DemoAction } from '@threads-id/contracts';
+import { DEMO_EDITORIAL_SAMPLE, DEMO_JOB_NAME } from '@threads-id/contracts';
+import type { DemoAction, DemoJobData } from '@threads-id/contracts';
 
 type Repo = {
   create(id: string): Promise<void>;
@@ -9,7 +9,7 @@ type Repo = {
   list(): Promise<Array<DemoAction | Record<string, unknown>>>;
   fail?: (id: string, error: string) => Promise<void>;
 };
-type Queue = { send(name: string, data: { actionId: string }, options?: Record<string, unknown>): Promise<string | null> };
+type Queue = { send(name: string, data: DemoJobData, options?: Record<string, unknown>): Promise<string | null> };
 
 export function buildApp(deps: { repo: Repo; queue: Queue }) {
   const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
@@ -19,7 +19,11 @@ export function buildApp(deps: { repo: Repo; queue: Queue }) {
     const actionId = randomUUID();
     await deps.repo.create(actionId);
     try {
-      const jobId = await deps.queue.send(DEMO_JOB_NAME, { actionId }, { singletonKey: actionId });
+      const jobId = await deps.queue.send(
+        DEMO_JOB_NAME,
+        { actionId, sample: DEMO_EDITORIAL_SAMPLE },
+        { singletonKey: actionId }
+      );
       if (!jobId) throw new Error('Antrean menolak job demo');
     } catch (error) {
       await deps.repo.fail?.(actionId, error instanceof Error ? error.message : 'Gagal mengantrekan job');

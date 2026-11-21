@@ -1,8 +1,8 @@
 import pg from 'pg';
-import type { DemoAction } from '@threads-id/contracts';
+import type { DemoAction, DemoResult } from '@threads-id/contracts';
 
 const { Pool } = pg;
-export type DemoResult = { message: string; simulatedAgeSeconds: number };
+export type { DemoResult } from '@threads-id/contracts';
 
 type ActionRow = {
   id: string; kind: 'SYNTHETIC_AGE_20S'; status: DemoAction['status']; demo: true;
