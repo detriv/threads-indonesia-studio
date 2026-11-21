@@ -1,0 +1,6 @@
+{
+  "name":"@threads-id/api","version":"0.0.0","private":true,"type":"module",
+  "scripts":{"dev":"tsx watch src/server.ts","start":"node dist/server.js","build":"tsc -p tsconfig.json","typecheck":"tsc -p tsconfig.json --noEmit"},
+  "dependencies":{"@threads-id/contracts":"*","@threads-id/db":"*","fastify":"5.12.8","pg-boss":"12.9.0"},
+  "devDependencies":{"tsx":"4.21.0"}
+}

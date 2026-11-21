@@ -1,0 +1,23 @@
+{
+  "name": "threads-automation-indonesia",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "build": "npm run build -w @threads-id/contracts && npm run build -w @threads-id/db && npm run build -w @threads-id/api && npm run build -w @threads-id/worker && npm run build -w @threads-id/web",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "npm run build -w @threads-id/contracts && npm run build -w @threads-id/db && npm run typecheck -w @threads-id/contracts && npm run typecheck -w @threads-id/db && npm run typecheck -w @threads-id/api && npm run typecheck -w @threads-id/worker && npm run typecheck -w @threads-id/web",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs",
+    "migrate": "npm run migrate -w @threads-id/db"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "@types/node": "24.10.1",
+    "eslint": "9.39.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.73.0",
+    "vitest": "4.1.12"
+  },
+  "engines": {"node": ">=24"}
+}
