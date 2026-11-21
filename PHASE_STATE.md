@@ -4,7 +4,12 @@
 |---|---|---|
 | Phase 0 — fondasi + simulasi | COMPLETE | lint, typecheck, 4 tests, build, audit, Docker E2E, browser UI, editorial payload, restart persistence passed |
 | Phase 1 — Dashboard editorial | COMPLETE | `7bea826`; 17 unit + 52 integrasi, lint/typecheck/build/audit, Docker smoke/restart, QA browser fixture, review independen PASS; QA manual pengguna PASS (login dan dialog native) |
-| Fase 2–6 | NOT STARTED | Lihat `docs/ROADMAP.md` |
+| Fase 2 — Konten Gemini | IMPLEMENTED / LIVE VERIFICATION PENDING | 35 unit + 69 integrasi PostgreSQL PASS; lint/typecheck/build 5 workspace/audit 0, Docker smoke/restart terisolasi PASS; browser fixture generate/revise/failure/fallback PASS. Runtime `6ea5314`; review parent dan independen approved. Live Gemini PENDING (key/izin belum tersedia). |
+| Fase 3–6 | NOT STARTED | Tidak diizinkan pada sesi ini. Lihat `docs/ROADMAP.md` |
+
+## Fase 2 — reviewer blockers follow-up
+
+Normalisasi-distinct/mix reguler Coba tema dan evidence validation, invalidasi approval reguler setelah edit/revisi, serta commit provenance guard setelah source deletion sudah diperbaiki. RED/GREEN dan fresh/restart QA 18089/15446 PASS; review independen ulang APPROVED dan parent gates PASS; runtime `6ea5314`. Live Gemini tetap PENDING; bukan COMPLETE.
 
 ## Phase 0 acceptance
 

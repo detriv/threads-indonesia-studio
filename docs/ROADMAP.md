@@ -1,5 +1,7 @@
 # Roadmap
 
+Status kini: Fase 1 COMPLETE, Fase 2 **IN PROGRESS** (parent review dan live Gemini PENDING karena key/izin belum tersedia); Fase 3–6 belum dimulai. Lihat [konfigurasi dan bukti Fase 2](PHASE2.md).
+
 | Fase | Hasil | Kriteria utama |
 |---|---|---|
 | 0 — Fondasi | Monorepo, Compose empat service, migrasi, health, dan smoke job | Stack bersih tanpa kredensial eksternal; hasil job muncul di dashboard dan bertahan setelah restart |

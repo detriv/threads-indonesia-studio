@@ -236,3 +236,160 @@ PASS: restart tanpa hapus volume; sesi, aksi demo, draft, gaya, dan hasil simula
 Pada 2026-11-21 WIB pengguna menyatakan: “oke semua test ini sudah saya coba manual dan berhasil”. Ini menutup checklist yang diberikan: password salah ditolak, login benar membuka dashboard, refresh mempertahankan sesi, buat draft/jadwal besok, Cancel pada dialog mempertahankan jadwal, OK membatalkan jadwal, logout dan refresh kembali ke login. Sumber bukti: laporan langsung pengguna, bukan klaim agent mengamati ulang browser.
 
 Task 4 ditandai selesai. Fase 1 COMPLETE untuk cakupan simulasi lokal, runtime commit tetap `7bea826`; tidak ada perubahan kode, pengujian otomatis tidak diulang untuk pembaruan dokumentasi saja. Tidak push dan tidak memulai Fase 2 tanpa izin eksplisit.
+
+# Fase 2 — Konten Gemini / IN PROGRESS (delegasi, belum commit/push)
+
+## Scope, sumber dan baseline
+
+- Izin pengguna hanya Fase 2. Membaca repo aktual, kelima continuity files penuh, Git status/log, dan **seluruh** spesifikasi asli `/home/deva/.hermes/composer-pastes/pasted_content_2026-11-21_02-15-53-457_b79dcc.txt`. HEAD bersih `ca5d951` pada `main`; Fase 1 `7bea826` tetap COMPLETE.
+- Baseline delegasi `npm run test:all && npm run build` exit 0: **17 unit (5 file) + 52 PostgreSQL integration (7 file)**, kelima workspace build PASS. Helper reset diperiksa: hanya database berakhiran `_test`, koneksi default loopback 5432; tidak mereset/migrasi DB utama. Main .env/admin/volume tidak disentuh.
+- `web_extract` gagal karena backend search-only tidak mendukung extraction; alternatif urllib langsung berhasil fetch original official URLs structured-output/generate-content/api-key/rate-limits (61442/103138/16798/12496 karakter respons). Awalnya percobaan parsing BeautifulSoup gagal ModuleNotFoundError; memakai stdlib, tidak memasang dependency. Halaman asli dibaca untuk endpoint, schema, header, parts dan token fields. Snapshot scratch `gemini-official-{0,1,2,3}.txt`; URL dan implikasi perubahan contoh model ada di `docs/PHASE2.md`.
+- Tidak memanggil Gemini/Meta. Key tetap absent menurut parent; tidak mencari secret lain, tidak meminta chat key. Opt-in outbound false di seluruh runtime QA. Native Node fetch, tanpa dependency baru.
+
+## RED → GREEN vertikal aktual
+
+Semua perintah test memakai script canonical yang prebuild contracts/db agar bukan dist stale. Ini catatan per tracer bullet (bukan mengklaim setiap assertion regresi tambahan diawali RED).
+
+1. **Coba tema/voice fixture.** Tulis `apps/worker/src/generation.test.ts`, `npm test -- apps/worker/src/generation.test.ts` RED exit 1 missing `generation-provider.js`. Tambah kontrak/validasi dan prompt+simulation adapter; GREEN exit 0 **1 passed**. Assert tepat 3 output, 2 variasi format dan `Gue` dari contoh suara, prompt menandai quoted text data bukan instruksi, usage null.
+2. **Official REST contract.** Test transport Response fixture realistis ditambahkan. Perintah sama RED **1 failed/1 passed**, `callGemini is not a function`; implement URL generateContent/header x-goog-api-key/schema/candidates parts/usageMetadata; GREEN **2 passed**. Key tidak berada di URL; modelVersion dan tokens 41/24/65 diassert sebagai fixture, bukan respons live.
+3. **Durable persist/idempotency.** Test PostgreSQL `apps/worker/src/generation.integration.test.ts` ditulis; `npm run test:integration -- apps/worker/src/generation.integration.test.ts` RED missing processor. Implement 005 request/attempt tables, GenerationRepository dan worker advisory lock + atomic persist; GREEN **1 passed**. Dua processor konkuren pada request sama menghasilkan tepat 3 rows drafts, 0 schedules; replay terminal tidak memanggil adapter.
+4. **Quota konkuren.** Test memakai 2 request berbeda dan trigger test-only `pg_sleep(0.1)` dibersihkan finally. Command sama RED **1 failed/1 passed** (dua fulfilled pada limit1), GREEN **2 passed** setelah mutex settings → count request WIB → insert dalam transaksi; idempotency replay tidak hitung ulang; publication limit tetap 2. Gagal tetap memakai kuota generasi. Quota bukan quota/tier Google.
+5. **Revision request/commit.** RED **1 failed/2 passed**, locked revision diterima. Tambah version/lock/status guard saat submit, snapshot original, DraftRepository.update menerima expectedVersion dan transaksi worker; completion kembali memeriksa row terbaru dan menggunakan invalidasi schedule/outbox Fase 1. Lock toggles menaikkan draft version. GREEN **3 passed**, edit manual selama adapter tidak tertimpa dan request versi usang ditolak.
+6. **Fallback nyata.** RED **1 failed/3 passed**, fallback null walau ada regular APPROVED unlocked. Implement selection dan retrieval ulang eligibility tanpa mutasi; GREEN **4 passed**. Locked backup tidak eligible; setelah backup dikunci retrieval null, tidak ada jadwal dibuat. Retrieval memakai satu SQL eligibility snapshot (refactor menghilangkan get terpisah/TOCTOU).
+7. **Usage/recovery.** RED **1 failed/4 passed**, attempt lama tetap STARTED. Implement attempt per provider call, UNKNOWN pada recovery, modelVersion/token persistence, status terminal atomik dengan draft transaction. GREEN **5 passed**; row PROCESSING pulih, satu draft, old UNKNOWN/new COMPLETED, tokens32 model fixture persist dan cost null.
+8. **API route auth/CSRF/durable admission.** `npm run test:integration -- apps/api/src/generation.integration.test.ts` RED **1 failed**, GET route 404 alih-alih401. Tambah authenticated/CSRF generation routes/config/usage/fallback dan server wiring; GREEN **1 passed**. Request durable disimpan tanpa HTTP AI di API; worker dispatcher merekonsiliasi.
+9. **Missing key/opt-in.** Unit RED **1 failed/2 passed**, generateForProvider missing. Implement explicit generation provider terpisah DEMO_MODE, izin dan key wajib untuk real; GREEN **3 passed**. Real yang tidak dikonfigurasi menghasilkan CONFIG, tidak diganti simulation.
+10. **UI controls.** `npm test -- apps/web/src/generation.test.tsx` RED missing GenerationPanel; implement controls ide/short/deep/revise/Coba tema, config/model, sumber terpilih, evidence, polling usage/failures dan fallback. GREEN **1 passed** SSR real React. UI mount di Tema & Gaya dan Draft; tidak menjanjikan 3 sukses sebelum persisted completion. Tidak mengklaim SSR sebagai browser QA (browser terpisah di bawah).
+11. **Configured pricing.** Unit RED **1 failed/3 passed**, estimateCost missing; implement exact model price map dan complete-token guard; GREEN **4 passed**. Simulasi/unknown model/missing tokens/malformed prices selalu null; harga test fixture bukan harga produk Google.
+12. **Empat pilar/sources/invalid output.** Integration RED **1 failed/5 passed** karena invalid output diberi PROVIDER. Tetapkan INVALID_OUTPUT saat structured validation gagal; GREEN **6 passed**. Semua 4 preset theme+format/sample persisted, voice `Aku`, hanya owner note dipilih masuk context, trend caller evidence dipersist dan masuk IN_REVIEW; output kosong tidak menghasilkan 3 draft.
+13. **Dispatcher runtime root cause.** Smoke pertama setelah hash fix menunjukkan queue spam dan restart wait timeout; DB request akhirnya COMPLETED, jadi tidak diklaim immediate recovery PASS. Inspeksi pg-boss installed types/migration: standard queue tidak enforce singletonKey; polling setiap detik menciptakan banyak jobs duplikat no-op dan starvation. Tulis real pg-boss/PostgreSQL regression; RED missing generation-dispatcher; implement queue policy **exclusive** dan extracted dispatcher. GREEN **7 passed**, 3 polling hanya1 job per pending request. Worker/persistence advisory guard tetap dipakai.
+14. **Revision provenance.** Integration RED **1 failed/8 passed**, request revision menerima owner note berbeda walau persisted draft memakai note lain. Tambah exact personal source/evidence match di request boundary; GREEN **9 passed**. Tema/format/source snapshot tidak boleh diganti diam-diam oleh revisi.
+15. **Integration status jujur.** `npm run test:integration -- apps/api/src/history.integration.test.ts -t 'status integrasi'` RED **1 failed/7 passed** (runner ini menjalankan8 file tests walaupun filter), note masih future Phase2. Dynamic generation provider note tanpa connected claim; GREEN **8 passed**. UI integrasi mengarahkan ke config/generation panel dan tidak lagi mengklaim semua konten manual.
+16. **Typo provider.** Unit RED **1 failed/10 passed**, `gemnii` diam-diam simulation. generationConfig sekarang menerima hanya simulation/gemini, error CONFIG lainnya; per-function model fallback explicit. GREEN di final suite **11 provider tests passed**.
+17. **Backup yang bisa dibuat pengguna.** Test review regular RED **1 failed/10 passed**, regular DRAFT tak dapat APPROVE. Allow hanya APPROVE regular DRAFT melalui review policy existing (trend tetap sources/review gate); tambah UI **Setujui sebagai cadangan**. Final suite **11 worker PostgreSQL tests passed**. Fallback tidak lagi bergantung pada SQL fixture saja untuk menyiapkan backup.
+
+Regresi tambahan yang langsung GREEN (bukan mengklaim RED baru): 429/timeout/safety/invalid JSON/non-2xx sanitized errors transport mocks; invalid trend URL/future time/extra fabricated source fields; schedule-aware regular revision increments version dan trend revision cancels schedule; dua independent queued revisions barrier → tepat satu COMPLETED/satu CONFLICT; lock true→false saat adapter tetap CONFLICT via version; no duplicate drafts. Manual editor mengirim expectedVersion opsional di PATCH, sedangkan AI revision selalu wajib version. API Phase1 backward compatibility dipertahankan.
+
+## Runtime Docker terisolasi dan masalah yang diselesaikan
+
+- Repeatable script `scripts/phase2-smoke.mjs` membuat random QA admin/hash/envFile 0600 pada TMPDIR scratch dan project unik; main .env tidak dibaca. Default18086/15443, override PHASE2_WEB_PORT/DB_PORT. Memaksa generation simulation/key kosong/outbound false. Tidak ada volume deletion.
+- Percobaan `threads-phase2-qa-6b238b4e` gagal health startup karena hash dalam envFile tidak di-single-quote: Compose menginterpolasi `$argon2id` dll. Perbaiki penulisan hash literal single quotes; stack gagal dihentikan dengan docker stop, volume dipertahankan. Tidak ada credential/hash dicatat sebagai bukti.
+- Percobaan `threads-phase2-qa-5299123e` berhasil generate tetapi queued restart wait50detik timeout karena queue spam standard policy (di atas); DB kemudian menunjukkan request COMPLETED. Stack ini juga dihentikan tanpa hapus volume; kegagalan ini **bukan** hasil PASS yang disamarkan.
+- Setelah exclusive policy, `node scripts/phase2-smoke.mjs` exit0: project **threads-phase2-qa-4f73217b**, **18086/15443**; all4healthy. Keempat pilar masing-masing Coba tema3 draft, revision satu, queued request saat worker stop pulih setelah full down/up pada volume sama. 6requests/6attempts, token/biaya null, schedules0. Env `/home/deva/.hermes/cache/scratch/threads-phase2-ARZDHN/compose.env`, evidence sibling `evidence.json`.
+- Kode terakhir direbuild di project browser yang sama; migrasi005 berulang pada volume lama PASS, rows existing tetap. Final fresh smoke pada kode terakhir dijalankan lagi dengan **PHASE2_WEB_PORT=18087 PHASE2_DB_PORT=15444 node scripts/phase2-smoke.mjs**, exit0. Project **threads-phase2-qa-ef721d39**,4healthy, queued request sebelum worker stop tetap pulih dan session/drafts bertahan. Env/evidence `/home/deva/.hermes/cache/scratch/threads-phase2-JdXxq3/{compose.env,evidence.json}`. Tidak menyentuh main5432 atau QA Phase1 18082/15439.
+- Final request IDs TRY_THEME: `878b9b13-bdd4-4570-bbbe-c7274f4ce7a4`, `f6d480f6-827f-46f5-bec7-50e14622d7b2`, `4ba01073-14ff-469d-b2f1-8cc84db016a4`, `7bc7e562-8028-4b7c-ac9c-bfb4d42310c6`; masing-masing cardinality draft_ids3, persisted theme/text/Gue/format diverifikasi HTTP. Revision `32cab5c6-e101-40d0-8c17-d88ebb7ad253` target draft `7c9cbbbb-d362-46d5-baca-06e978fa2715`, version bertambah; queued restart `415ab960-df7e-48a8-8cfa-fb72f47fd4f0`. Final smoke6request/6attempt,0failed,0schedules, token/cost null.
+
+## Browser nyata dan semantic persisted evidence
+
+- Browser memakai cookie sesi QA dari smoke file0600 via CDP, **bukan input password/login form**. Main admin tidak disentuh. Tidak ada password diketik di browser. Pada refresh cookie sempat hilang/tertimpa host127.0.0.1; restore cookie fixture tanpa mengetik credential. Desktop nav memasukkan glyph sehingga exact innerText Draft tidak match; diperbaiki selector nav textContent endsWith. Ini harness selectors, bukan aplikasi gagal auth.
+- `threads-phase2-qa-4f73217b` 18086 browser: Coba tema tombol menghasilkan request **6eaa65d8-1152-4383-9a51-d9edf4fbd1af**, COMPLETED dengan3 persisted drafts, list draft dari13 menjadi16 dan0schedules. Label SIMULASI/bukan respons Gemini nyata, model simulation-v1, quota generasi terpisah, token/biaya belum diketahui terlihat.
+- Pilih regular draft melalui **Siapkan cadangan → Setujui sebagai cadangan** di UI: **65b15097-f629-4b0a-9f5c-588e55af4a0a** APPROVED/version2, teks tetap. Readback PostgreSQL target tepat membuktikan effect approval, bukan hanya click.
+- Untuk failure UI tanpa outbound/key, insert **fixture** queued request **ecb8c67c-e0a4-4e66-91e6-b09d115b95c7**, provider GEMINI/model explicit-unconfigured-fixture, menyalin context/input TRY_THEME QA via DB. Worker real menolak melalui outbound false/key absent → FAILED CONFIG dengan0draft; ini fixture request untuk uji pagar konfigurasi, **bukan live Gemini response/HTTP call**. UI menampilkan “Konfigurasi Gemini belum lengkap; tidak diganti simulasi.” dan tombol fallback. Klik benar-benar GET fallback, teks draft65b... muncul berlabel “Draft cadangan lama · bukan generasi baru”, masihAPPROVED/unlocked, tidak dijadwalkan/diubah otomatis.
+- Browser revision memilih target **aeb8de42-5791-4a90-8dcf-de2c3517d8f8**; request **f74a12cb-b257-46b4-9f32-1c8e94a7d299** COMPLETED, target version2 dan teks manual awal tetap diikuti perbaikan fixture. Readback DB: total9requests (8COMPLETED/1FAILED),8completed attempts/1failed, fallback target tetapAPPROVED v2 dan schedules0.
+- Evidence repo `docs/qa/phase2-generation.png`, `phase2-failure.png`, `phase2-fallback.png`. Screenshot fallback ditinjau vision: readable, tidak overlap; DOM desktop1365x1000 tidak horizontal overflow. Satu permintaan vision screenshot generation sempat upstream stream error; retry berhasil: controls readable, SIMULASI/bukan Gemini nyata, live publikasi mati, tidak overlap. Screenshot tidak diklaim bukti backend tanpa readback DB terpisah. SSR UI test dan DOM/browser content juga terverifikasi.
+
+## Quality gates final dan file manifest
+
+- `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` menjalankan **29 unit/behavior (7 files) + 64 PostgreSQL integration (9 files), 0 gagal/skip**, kelima workspace compile/build PASS, lint PASS, audit0. Trailing blank line .env.example membuat command terakhir git diff --check exit2; whitespace .env.example dan trailing blank WORKLOG diperbaiki; `git diff --check && git status --short && docker ps --format ...` diulang exit0. Main stack8080/5432 dan QA Phase1 18082/15439 tetap healthy; kedua stack Phase2 final/browser juga4healthy. Tidak menyatakan seluruh chained command exit0 pada run pertama.
+- Tidak tambah dependency/ubah lockfile. Docker npm ci memperlihatkan warning existing ESLint9unsupported dan esbuild install-script approvals; build sukses, audit0. Tidak mengubah dependency di luar scope untuk warning ini.
+- Created: `packages/contracts/src/generation.ts`; `packages/db/src/generation.ts`, `migrations/005_generation.sql`; API `generation-routes.ts` + integration test; worker `generation-provider.ts`, `generation-processor.ts`, `generation-dispatcher.ts` + unit/integration tests; web `GenerationPanel.tsx` + generation test; `scripts/phase2-smoke.mjs`; `docs/PHASE2.md`;3screenshots.
+- Modified: exports contracts/db; DraftRepository transaction/version/approval/fallback snapshot; DB testing truncate; API app/server/draft expectedVersion/history integration note + regression; worker runtime; web App; Compose/env example; README dan5continuity docs. Tidak ada deletion/commit/push. Skill TDD default profile ditambah pitfall pg-boss policy explicit karena runtime menemukan singletonKey standard queue tidak cukup.
+
+## Acceptance / remaining
+
+- [x] Ide/short/deep/revise controls dan exactly3 Coba tema persisted tanpa jadwal; empat pilar dan variasi format diuji serta runtime.
+- [x] Prompt suara/catatan terpilih/evidence tervalidasi, quoted data boundary, strict output validation; simulation vs actual label.
+- [x] Durable queue/restart/idempotent persistence dan deterministic quota/revision concurrency, lock/version guard dan old schedule/history safety.
+- [x] Provider errors dan CONFIG terlihat di UI, no secret/provider-body leakage; fallback draft lama benar-benar diambil tanpa schedule/publish/content mutation.
+- [x] Model/source/token/request/attempt persistence, optional known pricing only; quota publikasi terpisah; key worker only; Meta liveOFF.
+- [x] Lint/typecheck/test/build/audit, Docker fresh+restart, browser fixture+DB semantic evidence; no main mutations/volume deletion.
+- [ ] Parent independent review/acceptance/closure. Fase2 tetap **IN PROGRESS**.
+- [ ] Live Gemini verification **PENDING** karena key/izin outbound belum tersedia. Configured/documented model bukan jaminan availability. Mocked transport dan simulation tidak diklaim bukti live.
+- [ ] Phase3 belum dimulai dan tetap dilarang sesi ini. Tidak ada Meta publish/reply/OAuth/grounding/gambar.
+- Known boundary: crash setelah request provider mungkin berhasil namun belum tersimpan dapat mengulang AI call, attemptUNKNOWN/token/cost unknown jujur; tidak ada exactly-once billing claim. Manual PATCH without expectedVersion tetap backward compatible; AI revisi selalu wajib version. Estimasi biaya bukan invoice, operator harus mengisi pricing sesuai exact model/token tier.
+- Next exact action: parent inspeksi diff, rerun `npm run test:all` dan quality gates, baca `docs/PHASE2.md`, cek QA semantic payloads/IDs di atas. Jangan commit/push/mark COMPLETE sampai parent review. Kedua QA final/browser running untuk review; stack percobaan gagal stopped, semua volumes dipertahankan.
+
+## Fase 2 — verifikasi parent independen
+
+- Parent menjalankan `git diff --check && npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate`, exit 0: 29 unit/behavior + 64 integrasi PostgreSQL, 0 gagal/skip; build lima workspace dan audit 0 kerentanan.
+- Parent menjalankan `PHASE2_WEB_PORT=18088 PHASE2_DB_PORT=15445 node scripts/phase2-smoke.mjs`, exit 0. Project `threads-phase2-qa-a877de0f`, evidence `/home/deva/.hermes/cache/scratch/threads-phase2-eSZYos/evidence.json`. Empat tema masing-masing tepat3 draft, gaya Gue, tanpa jadwal, revisi dan request antrean bertahan setelah full restart. Recovered request `08dba46a-7232-469e-ace6-c8d5aa1c4862`. Token/biaya simulasi null, tidak diklaim Gemini nyata.
+- Browser parent memakai sesi fixture QA di 18088 (bukan login password form), klik Coba tema menghasilkan request `e446b6b0-c061-4645-94bb-58148a736f54`, COMPLETED/3 draft, total draft13→16; label SIMULASI dan tidak ada jadwal baru terlihat. Pemakaian6→7 request/attempt; harga/token tetap tidak diketahui.
+- Review independen kode sedang berjalan; belum commit/mark COMPLETE. Live Gemini tetap PENDING; tidak ada izin/key outbound. Stack utama 8080 tidak diubah.
+
+## Fase 2 — perbaikan tiga blocker review independen (delegasi follow-up)
+
+Status tetap **IN PROGRESS / review ulang parent PENDING**. Tidak commit/push, tidak mark COMPLETE, live Gemini PENDING. Bagian verifikasi parent di atas dipertahankan utuh. Follow-up tidak mengubah/merebuild main8080 atau QA fixtures sebelumnya termasuk parent18088; test integration tetap hanya reset DB berakhiran `_test`.
+
+### Blocker 1 — Coba tema benar-benar berbeda, mix reguler, evidence selalu valid
+
+1. Test kontrak `packages/contracts/src/generation-review.test.ts` ditulis lebih dahulu. `npm test -- packages/contracts/src/generation-review.test.ts` RED exit1 **3failed**: normalized duplicate teks, all-short, all-trend diterima (dengan evidence masa lalu valid). Tambah guard jumlah normalized-distinct3 (NFKC, collapse whitespace, trim, lowercase Indonesia) dan set format tepat pendek+detail reguler. Command sama GREEN exit0 **3passed**. Campuran dengan tren juga tidak memenuhi set regular-only.
+2. Tracer berikutnya: evidence2099 pada request reguler dan direct output validation. Command sama RED exit1 **2failed/3passed**. Pindahkan temporal validation ke evidenceSchema sehingga berlaku kapan pun field disertakan; output validator kembali memvalidasi supplied evidence. GREEN exit0 **5passed**. URL/time/relevance structural schema tetap dipakai, sumber tidak dikarang.
+3. Test simulation dengan theme example valid500karakter: `npm test -- apps/worker/src/generation.test.ts` RED exit1 **1failed/11passed**, tiga output hanya1unique karena cap500 memotong suffix berbeda. Fixture sekarang normalisasi/truncate base TRY_THEME lebih awal300karakter agar akhiran unik tidak terpotong; format tetap pendek/detail/pendek. `npm test -- apps/worker/src/generation.test.ts packages/contracts/src/generation-review.test.ts` GREEN exit0 **17passed**; panjang<=500 dan validator strict dicek.
+
+### Blocker 2 — approval tidak diwariskan ke isi baru
+
+- Tambah PostgreSQL regression `apps/worker/src/generation-review.integration.test.ts`: regular DRAFT dibuat→APPROVE→request gagal menunjuk backup→rewrite AI/manual→harusDRAFT, fallback lama null sampai persetujuan eksplisit ulang. `npm run test:integration -- apps/worker/src/generation-review.integration.test.ts` RED exit1 **2failed**: keduanya tetapAPPROVED.
+- DraftRepository.update sekarang menghitung perubahan substantif teks/tema/format/source URL/time/relevance/personalSourceId; regular APPROVED yang berubah kembaliDRAFT. No-op tidak menghapus approval. Jadwal reguler tetap policy increment-version+UPSERT (bukan cancel); tren tetapIN_REVIEW+cancel seperti sebelumnya.
+- GREEN `npm run test:integration -- apps/worker/src/generation-review.integration.test.ts apps/worker/src/generation.integration.test.ts` exit0 **13passed**. Existing regular/trend scheduled revision safety ikut green, fallback tidak bisa mengembalikan teks baru yang belum disetujui. Reapprove eksplisit membuka eligibility lagi tanpa jadwal otomatis.
+
+### Blocker 3 — source deletion tanpa version increment selama provider
+
+- Tracer PostgreSQL baru parametrized source deletion/theme change/format change pada saat adapter berjalan, sengaja versi SQL tetap sama. Kasus delete benar-benar DELETE personal_sources; FK SET NULL yang ada mengubah personalSourceId tanpa version bump. Adapter return terjadi setelah perubahan selesai, sehingga interleaving deterministik tanpa timing sleep.
+- `npm run test:integration -- apps/worker/src/generation-review.integration.test.ts` RED exit1 **3failed/2passed**, semuanya tersimpanCOMPLETED padahal provenance sudah berubah.
+- Commit GenerationRepository.complete mengambil settings lalu draft row lock dan membandingkan personalSourceId/theme/format dengan request snapshot; untuk tren URL/time/relevance juga dibandingkan. Ketidaksesuaian CONFLICT sebelum memanggil update isi, tanpa increment atau klaim provenance baru; transaksi rollback, worker menandai requestFAILED. Tidak perlu migrasi/trigger FK baru atau lock order baru.
+- Command sama GREEN exit0 **5passed**; tests assert teks tidak tertimpa, version tetap lama, source deletion tetapnull (bukan diklaim masih ada), row draft tetap1 dan requestdraft_ids kosong. `npm run test:all` kemudian exit0 **35unit (8files)+69integration (10files)**.
+
+### Quality gates dan smoke terbaru aktual
+
+- `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` **exit0**: **35 unit/behavior (8file)+69 PostgreSQL integration (10file)**,0failed/skipped, lint/typecheck/build kelima workspacePASS, audit0, diff whitespacePASS. Ini setelah ketiga fix, bukan memakai hasil93test parent sebelum fix.
+- Repeatable smoke ditambah skenario theme example500karakter, normalized3unique/mixregular/length<=500 serta APPROVED regular→AI revise→DRAFT. Menggunakan project/port baru saja: `PHASE2_WEB_PORT=18089 PHASE2_DB_PORT=15446 node scripts/phase2-smoke.mjs` **exit0**. Project **threads-phase2-qa-ee6464df**, seluruh4servicehealthy, fresh volume dan full down/up tanpa-v; queued recoveryPASS.7request/7attempt,0failure, token/costnull,0schedule. Tidak menyentuh fixtures lama.
+- Evidence `/home/deva/.hermes/cache/scratch/threads-phase2-sPH57T/evidence.json`, env file sibling`compose.env`; stack baru dibiarkanrunning untuk review. Request4pilar: `e21100c4-674c-48c0-bb52-b8abb59b601c`, `5cd9380e-31d7-4cc5-9594-55d0ed9b6607`, `ae481eb0-b8c1-4991-86bb-ff3b671b2933`, `c3d90960-5d79-4e8f-a79c-98c781e4393f`.
+- Long-example request **457b7422-941f-4afc-b264-f54915b09d6e**, three texts normalized-unique dan two regularformats diassert dari GET persisted drafts. Revision **338a9073-1343-45fb-82cb-1cdb3442461e**, target **a227b2c3-27ca-434b-9e07-f26412f1a74f** dipastikanAPPROVED sebelum AI danDRAFT sesudahnya. Queued-restart **f5b8e511-ea06-4209-ad2f-e3d98f235f85** COMPLETED setelahrestart, semua request lama tetapberisi draftIDs. Tidak ada panggilan Gemini/Meta; simulationlabel dan liveOFF tetap.
+- File follow-up: contracts generation.ts + NEWgeneration-review.test.ts; worker generation-provider.ts/generation.test.ts + NEWgeneration-review.integration.test.ts; DB drafts.ts/generation.ts; scripts/phase2-smoke.mjs; docs/PHASE2.md dan kelima continuitydocs. Tidak ada dependency/migration baru; parentWORKLOG section tidak ditimpa.
+- Next exact action: parent review ulang ketiga guard dan rerun regression/qualitygates seperlunya. Fase2 masih IN PROGRESS, liveverification menunggu key/izin terpisah. Jangan commit/push/markCOMPLETE atau mulaiPhase3 dari hasil delegasi.
+
+## Parent — perbaikan blocker Fase 2 diverifikasi ulang
+
+- Parent menjalankan `git diff --check && npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate`, exit0:35 unit/behavior+69 integrasi PostgreSQL,0 gagal/skip; build5workspace,audit0. Inspeksi langsung guard normalized-distinct/mixed regular output dan provenance commit di bawah lock sesuai regresi.
+- Parent mengulang enhanced smoke `PHASE2_WEB_PORT=18090 PHASE2_DB_PORT=15447 node scripts/phase2-smoke.mjs`, exit0. Evidence terlampir sebagai JSON; stack terisolasi tidak menyentuh main8080.
+```json
+{
+  "PASS": true,
+  "project": "threads-phase2-qa-788ca817",
+  "webPort": "18090",
+  "dbPort": "15447",
+  "base": "http://127.0.0.1:18090",
+  "envFile": "/home/deva/.hermes/cache/scratch/threads-phase2-0YxtHi/compose.env",
+  "requestIds": [
+    "3ab30f11-f6ab-4402-87ef-3523bef4fca0",
+    "bde1ecf6-9067-414c-ba9d-81e9b33182d2",
+    "ccc1ef52-0702-40f5-b1e2-68c233e4787d",
+    "202dcc9d-28b1-40bc-94e8-4951b9e3c02a"
+  ],
+  "longExampleId": "d40e137d-fc54-455e-b124-d47a95fc2da8",
+  "revisionId": "cea69b5d-b1d5-4bcc-ba49-f4f7a6fb503a",
+  "recoveredId": "f8859525-53e9-499f-b7d2-80e605f31a7e",
+  "draftId": "82697af2-35e8-497f-8482-088bee656b8f",
+  "usage": {
+    "requests": 7,
+    "failures": 0,
+    "attempts": 7,
+    "unknown_attempts": 0,
+    "total_tokens": null,
+    "estimated_cost": null,
+    "today_requests": 7,
+    "dailyLimit": 20,
+    "currency": "USD",
+    "note": "Token/biaya null berarti belum diketahui; simulasi bukan penggunaan Gemini nyata. UNKNOWN: worker terhenti; penggunaan provider mungkin sudah terjadi."
+  },
+  "evidenceFile": "/home/deva/.hermes/cache/scratch/threads-phase2-0YxtHi/evidence.json",
+  "browserFixture": "/home/deva/.hermes/cache/scratch/threads-phase2-0YxtHi/browser-fixture.json"
+}
+```
+- Review ulang independen sedang berjalan. Belum commit; live Gemini masih PENDING tanpa key/izin outbound.
+
+## Checkpoint kode Fase 2 — belum acceptance live
+
+- Reviewer ulang menyetujui perbaikan tiga blocker, menjalankan17targeted unit/provider PASS dan probe read-only duplicate/future-evidence/500char PASS. Parent full gates104tests dan smoke terbaru telah dijalankan sebelumnya.
+- Runtime commit `6ea5314` — `Phase 2: generasi konten Gemini dengan guard editorial`. Dokumentasi terpisah. Tidak push dan tidak deploy stack utama.
+- Fase2 berstatus IMPLEMENTED / LIVE VERIFICATION PENDING, bukan COMPLETE: operator perlu menyimpan key/model lokal dan mengizinkan uji generasi terbatas. Tidak ada rahasia diminta viachat. Fase3 belum dimulai.

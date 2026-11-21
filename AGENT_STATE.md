@@ -1,12 +1,12 @@
 # AGENT STATE
 
-- Fase: 1 — Dashboard editorial / COMPLETE (simulasi lokal).
-- Branch: `main`; verified runtime commit: `7bea826` (`Phase 1: dashboard editorial dan kontrol admin`). Dokumentasi checkpoint terpisah.
-- Fase 0 tetap COMPLETE; data lama tidak dihapus.
-- Verifikasi parent: lint, typecheck, build lima workspace, 17 unit/behavior + 52 integrasi PostgreSQL (0 gagal/skip), audit npm 0, Docker same-origin smoke dan restart volume PASS.
-- Browser: editorial/draft/review/schedule/history/integrasi/demo/logout diperiksa memakai sesi fixture QA. Snapshot history baru bertahan setelah draft diedit; data lama berlabel metadata tidak lengkap. Bukti `docs/qa/phase1-history-snapshot.png`.
-- Review independen ulang: APPROVED untuk local simulation; tidak mengklaim exactly-once publikasi live.
-- QA manual: pengguna mengonfirmasi seluruh checklist login, refresh sesi, jadwal, dialog native Cancel/OK, dan logout berhasil pada 2026-11-21 WIB. Bukti ini laporan pengguna, bukan pengamatan browser agent. Minor polish non-blocking: kontras teks sekunder dan indikator integrasi.
-- Runtime: pengguna melaporkan berhasil mencoba alur manual setelah panduan setup. Status proses runtime tidak diperiksa ulang saat penutupan dokumentasi; jangan gunakan catatan ini sebagai health check live.
-- Keamanan: DEMO_MODE wajib true, tidak ada Meta/Gemini/live; rahasia tidak masuk Git. Fase 2–6 belum dimulai, tidak push.
-- Next safe action: tunggu persetujuan eksplisit untuk Fase 2 Konten Gemini. Tidak ada task Fase 1 yang tersisa.
+- Fase aktif: **2 — Konten Gemini / IMPLEMENTED — LIVE VERIFICATION PENDING**. Fase0/1 COMPLETE; Fase3 belum dimulai.
+- Branch `main`, verified runtime `6ea5314` (`Phase 2: generasi konten Gemini dengan guard editorial`). Dokumentasi checkpoint terpisah; tidak push.
+- Parent rerun:35 unit/behavior+69 integrasi PostgreSQL,0 gagal/skip; lint/typecheck/build5workspace/audit0/diff-check PASS.
+- Review independen ulang APPROVED untuk simulasi+mocked-provider;17 targeted tests/probes reviewer juga PASS. Tidak dianggap verifikasi live Gemini.
+- Fitur: ide/short/deep/revisi, tepat3 draft Coba tema normalized-distinct dengan variasi format reguler tanpa jadwal; model/usage/sumber; output schema; generation quota; fallback approved reguler nyata; edit/lock/version/provenance guard dan invalidasi approval setelah perubahan substantif.
+- Runtime parent smoke terakhir: project `threads-phase2-qa-788ca817`,18090/15447, envFile `/home/deva/.hermes/cache/scratch/threads-phase2-0YxtHi/compose.env`; fresh/restart PASS,7request/attempt,0jadwal. Browser parent sebelumnya18088 memverifikasi tombol Coba tema dan3draft. Evidence lengkap WORKLOG.
+- Main8080/.env/admin/volume tidak diubah untuk QA. Stack utama masih image Fase1; jangan klaim sudah dideploy Fase2. Stack QA terisolasi masih berjalan untuk review; jangan hapus volume.
+- Pending: key/model terkonfigurasi server dan izin outbound eksplisit, lalu uji Gemini nyata dan validasi kualitas konten. Jangan key di chat. Tidak ada panggilan Gemini/Meta saat implementasi.
+- Keamanan: posting/reply tetap simulasi. AI provider terpisah dari DEMO_MODE; default simulation dan outbound=false. Crash sebelum persist dapat mengulangi call provider; attempt UNKNOWN, bukan exactly-once billing.
+- Next safe action: minta operator konfigurasi secret/model secara lokal + izin uji terbatas. Ikuti docs/PHASE2.md, jangan lanjutFase3/push tanpa izin.
