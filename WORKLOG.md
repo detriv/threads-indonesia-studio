@@ -107,3 +107,36 @@ Tidak ada item Phase 0 yang tertunda. Auth/otorisasi sengaja ditunda ke Phase 1 
 ## Next exact action
 
 Jangan menambah integrasi eksternal. Tunggu spesifikasi otoritatif Phase 1, lalu mulai dari test perilaku auth yang gagal sebelum implementasi.
+
+## Verifikasi independen dan koreksi setelah handoff
+
+### 7. Audit ulang oleh agent induk
+
+- Repo diverifikasi dari commit awal Phase 0 `6150620`; working tree saat itu bersih dan empat container berstatus `healthy`.
+- Quality gates dijalankan ulang: `npm run lint && npm run typecheck && npm test && npm run build && npm audit` → exit `0`; tetap `3` file / `4` test passed dan audit `0` vulnerability.
+- Smoke independen menghasilkan aksi `c8f0dd9a-b201-4cb9-9c62-005fa7cf2d7e` dengan status `COMPLETED`.
+- Stack dibuat ulang dengan `docker compose down`, `docker compose create`, dan `docker compose start` tanpa menghapus volume. Aksi tersebut tetap tersedia dan history berjumlah `4`; seluruh service kembali `healthy`.
+- Dashboard dibuka di browser nyata pada `http://127.0.0.1:8080`. Klik tombol menaikkan riwayat dari `4` ke `5` aksi dan aksi baru selesai melalui jalur UI → API → pg-boss → worker → PostgreSQL → UI.
+
+### 8. Gap spesifikasi yang ditemukan
+
+- Audit kode menemukan payload job awal hanya berisi `actionId`, sedangkan spesifikasi meminta payload sintetis yang benar-benar bertema keseharian usia 20-an.
+- Implementasi awal memakai istilah “usia 20 detik”, sehingga status Phase 0 ditahan sementara sampai gap diperbaiki.
+
+### 9. Koreksi dengan RED → GREEN
+
+- Test kontrak, API, dan worker diperbarui lebih dahulu untuk mewajibkan sample editorial `KEBIASAAN_DIGITAL` / `OBSERVASI_PENDEK` dengan teks observasi “cek jam”.
+- RED: test terarah → exit `1`; `3` test gagal karena kontrak/sample/job/result belum tersedia. Ini kegagalan yang diharapkan.
+- Implementasi: tambah schema dan tipe payload job, sample editorial tervalidasi, pengiriman sample dari API, validasi job di worker, result editorial di PostgreSQL, serta copy dashboard yang sesuai usia 20-an.
+- GREEN awal mengungkap package `contracts` masih memakai output build lama. Script `npm test` diperbaiki agar membangun package shared sebelum Vitest; typecheck kemudian menemukan tipe queue lama dan diperbaiki menjadi `DemoJobData`.
+- Smoke lama sengaja gagal karena masih memeriksa `simulatedAgeSeconds`; assertion diperbarui untuk memeriksa pillar, format, dan teks editorial nyata.
+
+### 10. Verifikasi final setelah koreksi
+
+- `npm run lint && npm run typecheck && npm test && npm run build && npm audit && npm run smoke` → exit `0`.
+- Tests: `3` file / `4` test passed. Build semua workspace PASS. Audit: `0 vulnerabilities`.
+- Docker images dibangun ulang dan empat service kembali `healthy`.
+- Smoke final: aksi `206dcdb4-e376-4377-b415-266e9f6ab7a4`, status `COMPLETED`, `historyCount=7`.
+- Bukti result menyimpan `editorialSample` dengan pillar `KEBIASAAN_DIGITAL`, format `OBSERVASI_PENDEK`, dan teks observasional keseharian usia 20-an.
+- Browser final menampilkan heading “Simulasi konten keseharian usia 20-an” dan hasil terbaru “Simulasi konten observasi kebiasaan digital berhasil diproses.”
+- Commit koreksi terverifikasi: `d7a1310 fix: gunakan payload editorial usia 20-an pada simulasi`.

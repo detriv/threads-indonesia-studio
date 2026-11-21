@@ -23,3 +23,12 @@
 ### Commit
 
 - Focused commit message: `Phase 0: fondasi dan alur simulasi end-to-end`.
+- Base commit: `6150620`.
+
+### Post-handoff correction
+
+- Independent audit found the initial job payload had only an action ID and did not carry the required synthetic everyday-life content.
+- Added validated `KEBIASAAN_DIGITAL` / `OBSERVASI_PENDEK` editorial payload from API through pg-boss to worker result.
+- Updated dashboard wording and smoke assertions to verify the real editorial sample.
+- Re-ran lint, typecheck, 4 tests, build, audit, Docker smoke, browser UI flow, and persistence verification.
+- Verified runtime correction commit: `d7a1310`.
