@@ -1,6 +1,11 @@
 import pg from 'pg';
 import type { DemoAction, DemoResult } from '@threads-id/contracts';
 
+export * from './auth.js';
+export * from './editorial.js';
+export * from './drafts.js';
+export * from './schedule.js';
+
 const { Pool } = pg;
 export type { DemoResult } from '@threads-id/contracts';
 

@@ -8,6 +8,9 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "npm run build -w @threads-id/contracts && npm run build -w @threads-id/db && npm run typecheck -w @threads-id/contracts && npm run typecheck -w @threads-id/db && npm run typecheck -w @threads-id/api && npm run typecheck -w @threads-id/worker && npm run typecheck -w @threads-id/web",
     "test": "npm run build -w @threads-id/contracts && npm run build -w @threads-id/db && vitest run",
+    "test:integration": "npm run build -w @threads-id/contracts && npm run build -w @threads-id/db && vitest run --config vitest.integration.config.mjs",
+    "test:all": "npm test && npm run test:integration",
+    "hash-password": "node scripts/hash-password.mjs",
     "smoke": "node scripts/smoke.mjs",
     "migrate": "npm run migrate -w @threads-id/db"
   },

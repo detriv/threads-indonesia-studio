@@ -1,14 +1,24 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import type pg from 'pg';
 import { createPool } from './index.js';
+
+const migrationsDir = resolve(dirname(fileURLToPath(import.meta.url)), '../migrations');
+
+/** Terapkan semua migrasi .sql berurutan (idempoten) memakai satu pool. */
+export async function applyMigrations(pool: pg.Pool): Promise<void> {
+  const files = (await readdir(migrationsDir)).filter((f) => f.endsWith('.sql')).sort();
+  for (const file of files) {
+    const sql = await readFile(resolve(migrationsDir, file), 'utf8');
+    await pool.query(sql);
+  }
+}
 
 export async function migrate(): Promise<void> {
   const pool = createPool();
   try {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const sql = await readFile(resolve(here, '../migrations/001_init.sql'), 'utf8');
-    await pool.query(sql);
+    await applyMigrations(pool);
   } finally {
     await pool.end();
   }
