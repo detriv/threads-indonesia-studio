@@ -1,5 +1,18 @@
 # WORKLOG — Phase 0
 
+## Auto-draft balasan (Gemini) — verifikasi & temuan model
+
+**Auto-draft 4C tersambung & terbukti (2026-11-22).** `GEMINI_ALLOW_OUTBOUND=true`; hook draft di worker memanggil `generateForProvider(purpose SHORT)` dengan konteks tema + contoh tulisan akun.
+
+- **Model diuji langsung (HTTP status nyata):**
+  - `gemini-4-hydrogen` → **503 UNAVAILABLE** ("model currently experiencing high demand")
+  - `gemini-2.5-flash` → **404** (no longer available to new users; disarankan 3.8-flash)
+  - `gemini-3.5-flash-lite` → **200 OK** ✅ (prompt 342 · output 55 · total 397 token; model tercatat `gemini-3.5-flash-lite`)
+- **Konfigurasi akhir:** `GEMINI_MODEL=gemini-3.5-flash-lite` + `GEMINI_MODEL_SHORT=gemini-3.5-flash-lite` di `.env` (mode 0600). `.env` tidak masuk git, jadi perubahan ini hanya tercatat di sini.
+- **Batas baru yang terbuka:** auto-draft memanggil provider **tanpa** melalui `generation_requests`/`generation_attempts`, jadi **pemakaian & biaya auto-draft belum tercatat di DB**. Belum diperbaiki — perlu keputusan operator (kutambahkan pencatatan, atau terima sebagai keterbatasan).
+- Draft gagal (non-Gemini/PROVIDER) → `draft_text` tetap kosong; operator menulis manual. Tidak ada teks simulasi palsu.
+
+
 ## Fase 4C — kotak masuk balasan (reply inbox)
 
 **Fase 4C = LIVE VERIFIED**, 4B = IMPLEMENTED (live balasan MATI). Tarik balasan orang dari postingan kita → kandidat → operator setujui → pesan balasan.
