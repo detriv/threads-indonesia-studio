@@ -10,6 +10,7 @@
 - Gate akhir: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip. Test baru: `fetchPublishedUrl` (sukses & gagal) dan `dispatchThreadsPublish` dedupe.
 - Alur operator: halaman Publikasi → "Buka halaman OAuth Meta" → login Threads → Authorize → callback publik menyimpan koneksi → toggle live ON → kirim antrean. Syarat Meta: akun Threads **publik** dan invite tester di-Accept di Settings → Account → Website permissions (error `1349245` bila belum).
 - Next exact action: review independen + keputusan COMPLETE. Matikan live via dashboard bila tidak dipakai. Jangan push tanpa persetujuan.
+- **Pembersihan data (permintaan operator, 2026-11-22):** semua data draft dihapus — `drafts` 12, `publish_queue` 4, `publish_attempts` 6, `generation_requests` 10, `generation_attempts` 10, `schedule_entries` 4, `schedule_executions` 5, `schedule_versions` 6 → semua 0. Koneksi Threads **tetap** (user_id `29713621341597282`, token valid s/d 2027-01-21) dan `live_posting=false`. Tiga post di atas **tetap hidup di Threads**; hanya baris antreannya yang hilang, media_id + permalink tercatat di WORKLOG/CHANGELOG ini.
 
 
 ## Klarifikasi pengguna — prompt/chat Gemini menjadi teks draft/caption (working tree)

@@ -11,8 +11,9 @@
   - `17949796110358338` → https://www.threads.com/@lorem_ipsum7777/post/DgBxqDnkjxK
 - Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip.
 - Temuan & perbaikan saat verifikasi live: ID token-exchange (`…280`) ≠ ID kanonik (`…282`) → ambil dari `GET /me`; `published_url` memakai permalink asli `threads.com/@<user>/post/<shortcode>`; dispatcher publish kini mengecek job aktif agar tidak mengirim duplikat tiap detik.
-- Live masih **ON**; matikan lewat dashboard (Publikasi → "Matikan live") bila tidak dipakai. Akun Threads harus publik; invite tester harus di-Accept di Settings → Account → Website permissions.
+- Live sekarang **OFF** (`live_posting=false`); nyalakan lewat dashboard (Publikasi → "Aktifkan live") bila akan posting lagi. Akun Threads harus publik; invite tester harus di-Accept di Settings → Account → Website permissions.
 - Next exact action: review independen + keputusan COMPLETE. Jangan push/deploy ke main tanpa persetujuan.
+- **Pembersihan data (permintaan operator):** semua data draft + antrean + attempt dihapus (drafts 12, publish_queue 4, publish_attempts 6, generation_requests 10, schedule_entries 4 → semua 0). Koneksi Threads tetap; `live_posting=false`. Tiga post uji tetap hidup di Threads.
 
 - Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.
 - Final gates aktual: `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0, **62unit/behavior+71integrasi PostgreSQL**,0gagal/skip,5workspace build/typecheckPASS,audit0. Tests transport adalah mock lokal, bukan Gemini nyata. RED/GREEN rinci ada di WORKLOG.
