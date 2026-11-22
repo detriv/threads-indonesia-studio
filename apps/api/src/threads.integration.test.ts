@@ -4,6 +4,7 @@ import { AuthRepository, DraftRepository, EditorialRepository, ScheduleRepositor
 import { resetTestDatabase, truncateAll } from '@threads-id/db/testing';
 import { buildApp } from './app.js';
 import { adminLogin } from './testing.js';
+import { fetchThreadsUserId } from './threads-routes.js';
 
 let pool: pg.Pool;
 let auth: AuthRepository;
@@ -38,6 +39,17 @@ beforeEach(async () => {
 });
 
 describe('Meta Threads API (PostgreSQL, transport dimock)', () => {
+  it('fetchThreadsUserId memakai ID kanonik dari /me (token-exchange bisa berbeda)', async () => {
+    const seen: string[] = [];
+    const transport = vi.fn(async (input: RequestInfo | URL) => {
+      seen.push(String(input));
+      return new Response(JSON.stringify({ id: '29713621341597282', username: 'lorem_ipsum7777' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    const profile = await fetchThreadsUserId('token-apa-saja', transport);
+    expect(seen[0]).toContain('https://graph.threads.com/v1.0/me?fields=id,username');
+    expect(profile).toEqual({ id: '29713621341597282', username: 'lorem_ipsum7777' });
+  });
+
   it('semua rute Meta Threads menolak akses tanpa session', async () => {
     const app = makeApp();
     const routes: Array<[string, string]> = [

@@ -71,20 +71,22 @@ export function registerThreadsRoutes(app: FastifyInstance, threads: ThreadsRepo
       return reply.code(502).send({ error: message });
     }
     const expiresAt = new Date(Date.now() + (token.expiresIn ? token.expiresIn * 1000 : 60 * 24 * 3600_000));
+    const profile = await fetchThreadsUserId(token.accessToken);
     const connection = await threads.upsertConnection({
       appId: env.appId,
       appSecretPresent: true,
-      userId: token.userId,
+      userId: profile.id,
       accessTokenPresent: true,
       tokenExpiresAt: expiresAt.toISOString(),
       scopes: env.scopes.join(','),
       status: env.livePosting ? 'CONNECTED' : 'DISCONNECTED',
       livePosting: env.livePosting,
-      note: 'Token long-lived aktif. Nilai token hanya dibaca worker dari environment server (THREADS_ACCESS_TOKEN); dashboard tidak pernah menampilkan token.'
+      note: `Terhubung sebagai @${profile.username ?? profile.id}. ID kanonik diambil dari /me.`
     });
     return {
       ok: true,
       userId: connection.userId,
+      username: profile.username,
       scopes: connection.scopes,
       tokenExpiresAt: connection.tokenExpiresAt,
       livePosting: connection.livePosting,
@@ -113,13 +115,19 @@ export function registerThreadsRoutes(app: FastifyInstance, threads: ThreadsRepo
       return reply.code(502).send({ error: error instanceof Error ? error.message : 'Gagal menukar code OAuth' });
     }
     const expiresAt = new Date(Date.now() + (token.expiresIn ? token.expiresIn * 1000 : 60 * 24 * 3600_000));
+    const profile = await fetchThreadsUserId(token.accessToken);
     const connection = await threads.upsertConnection({
-      appId: env.appId, appSecretPresent: true, userId: token.userId, accessTokenPresent: true,
-      tokenExpiresAt: expiresAt.toISOString(), scopes: env.scopes.join(','),
-      status: env.livePosting ? 'CONNECTED' : 'DISCONNECTED', livePosting: env.livePosting,
-      note: 'Token long-lived aktif (lewat redirect Meta).'
+      appId: env.appId,
+      appSecretPresent: true,
+      userId: profile.id,
+      accessTokenPresent: true,
+      tokenExpiresAt: expiresAt.toISOString(),
+      scopes: env.scopes.join(','),
+      status: env.livePosting ? 'CONNECTED' : 'DISCONNECTED',
+      livePosting: env.livePosting,
+      note: `Terhubung sebagai @${profile.username ?? profile.id}. ID kanonik diambil dari /me.`
     });
-    return reply.code(200).send(`<html lang="id"><body style="font-family:system-ui"><h1>Akun terhubung</h1><p>User ID: ${connection.userId}</p><p>Kedaluwarsa: ${connection.tokenExpiresAt ?? 'tidak diketahui'}</p><p>Kembali ke dashboard untuk mengaktifkan live.</p></body></html>`);
+    return reply.code(200).send(`<html lang="id"><body style="font-family:system-ui"><h1>Akun terhubung</h1><p>User ID: ${connection.userId}</p><p>Username: @${profile.username ?? '—'}</p><p>Kedaluwarsa: ${connection.tokenExpiresAt ?? 'tidak diketahui'}</p><p>Kembali ke dashboard untuk mengaktifkan live.</p></body></html>`);
   });
 
   /** Aktifkan/matikan publikasi live. Default tetap mati; mengaktifkan = keputusan operator eksplisit. */
@@ -206,6 +214,18 @@ export async function exchangeOAuthCode(input: { code: string; appId: string; ap
 }
 
 export class OAuthError extends Error {}
+
+/** ID dari token-exchange bisa berbeda dari ID kanonik akun.
+ * Meta menolak ID non-kanonik, jadi ambil dari GET /me?fields=id. */
+export async function fetchThreadsUserId(accessToken: string, transport: typeof fetch = fetch): Promise<{ id: string; username: string | null }> {
+  const response = await transport(
+    `https://graph.threads.com/v1.0/me?fields=id,username&access_token=${encodeURIComponent(accessToken)}`,
+    { signal: AbortSignal.timeout(30_000) }
+  );
+  const body = await response.json() as { id?: string; username?: string; error?: { message?: string } };
+  if (!response.ok || !body.id) throw new OAuthError(body.error?.message ?? 'Meta tidak mengembalikan ID Threads.');
+  return { id: body.id, username: body.username ?? null };
+}
 
 /**
  * Token mentah TIDAK masuk DB. Worker membaca dari environment; di Compose lokal token
