@@ -13,5 +13,7 @@ export function buildAuthorizeUrl(input: { appId: string; redirectUri: string; s
   return `https://threads.com/oauth/authorize?${params.toString()}`;
 }
 
-export const DEFAULT_OAUTH_REDIRECT = 'http://127.0.0.1:8080/api/threads/oauth-callback';
+/** Redirect callback harus https publik (Meta menolak http).
+ * Default lokal untuk pengembangan; produksi set THREADS_OAUTH_REDIRECT ke URL tunnel/domain. */
+export const DEFAULT_OAUTH_REDIRECT = process.env.THREADS_OAUTH_REDIRECT || 'http://127.0.0.1:8080/api/threads/oauth-callback';
 export const DEFAULT_SCOPES = THREADS_SCOPES;

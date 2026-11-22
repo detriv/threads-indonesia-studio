@@ -36,6 +36,7 @@ services:
       THREADS_APP_SECRET: ${THREADS_APP_SECRET:-}
       THREADS_USER_ID: ${THREADS_USER_ID:-}
       THREADS_SCOPES: ${THREADS_SCOPES:-threads_basic,threads_content_publish}
+      THREADS_OAUTH_REDIRECT: ${THREADS_OAUTH_REDIRECT:-http://127.0.0.1:8080/api/threads/oauth-callback}
       THREADS_TOKEN_FILE: /tmp/threads-token/token
       DEMO_MODE: "true"
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
