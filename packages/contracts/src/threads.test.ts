@@ -9,7 +9,7 @@ describe('kontrak Phase 3: Meta Threads', () => {
     expect(THREADS_MAX_TEXT).toBe(500);
     expect(THREADS_PUBLISH_WAIT_MS).toBe(30_000);
     expect(THREADS_JOB_NAME).toBe('threads.publish-text');
-    expect(THREADS_SCOPES).toEqual(['threads_basic', 'threads_content_publish']);
+    expect(THREADS_SCOPES).toEqual(['threads_basic', 'threads_content_publish', 'threads_manage_replies', 'threads_read_replies']);
   });
 
   it('status koneksi mencakup kegagalan token/scope/kuota yang jujur', () => {

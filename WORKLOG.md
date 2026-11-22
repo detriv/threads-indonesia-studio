@@ -1,5 +1,17 @@
 # WORKLOG — Phase 0
 
+## Fase 4B — balasan Threads (reply)
+
+**Fase 4B = IMPLEMENTED / LIVE VERIFICATION PENDING.** Antrean balasan terpisah dari post, live & jeda & kuota sendiri. **Belum ada balasan nyata**: token lama belum punya `threads_manage_replies`.
+
+- Ditambahkan: migrasi `008_threads_reply.sql` (`reply_settings`, `reply_queue`, `reply_attempts` + trigger `REPLIED` wajib `media_id` & batas 500 byte); kontrak reply (`THREADS_REPLY_JOB_NAME`, status, settings); `ReplyRepository`; worker `reply-processor.ts` + dispatcher; `publishTextPost` menerima `replyToId` (dipakai ulang, bukan duplikasi alur); API `/api/threads/replies/{settings,replies,replies/:id,replies/:id/resolve}`; panel Balasan di Publikasi.
+- Scope OAuth diperluas: `threads_manage_replies` + `threads_read_replies` (butuh re-OAuth; token lama hanya `threads_basic,threads_content_publish`).
+- Verifikasi runtime: enqueue → worker → `REQUIRES_LIVE` (live balasan MATI), **tanpa balasan nyata**; panel Balasan terverifikasi di DOM.
+- Gate: lint/typecheck 0; **89 unit + 113 integrasi PostgreSQL PASS**, 0 gagal/skip.
+- Batas: live balasan terpisah dari post; jeda terpisah; anti-duplikat unik `(reply_to_id, text)`; kuota Meta reply 1.000/24 jam dibaca via `reply_quota_usage,reply_config`; ambigu after-send → `NEEDS_REVIEW` (tanpa kirim ulang buta).
+- Next: re-OAuth + izin live balasan → uji 1 balasan nyata.
+
+
 ## Fase 4A — discovery tren + skor relevansi (LIVE VERIFIED)
 
 **Fase 4A = LIVE VERIFIED**, 4B (reply) belum dimulai. Discovery RSS publik + skor 0–100 dengan alasan audit + kandidat → draft `TREN_RELEVAN` (IN_REVIEW). Live posting tetap MATI; tidak ada kiriman otomatis.

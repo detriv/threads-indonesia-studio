@@ -19,6 +19,8 @@ export type PublishTextPostInput = {
   credentials: ThreadsCredentials;
   transport?: ThreadsTransport | undefined;
   sleep?: ((ms: number) => Promise<void>) | undefined;
+  /** Phase 4B: bila diisi, container dibuat sebagai balasan ke media ID ini. */
+  replyToId?: string | undefined;
 };
 
 export type InspectContainerInput = {
@@ -129,7 +131,7 @@ export async function publishTextPost(input: PublishTextPostInput): Promise<Publ
   try {
     containerResponse = await transport(`${THREADS_BASE_URL}/${userId}/threads`, {
       method: 'POST',
-      body: form({ media_type: 'TEXT', text: input.text, access_token: accessToken }),
+      body: form({ media_type: 'TEXT', text: input.text, ...(input.replyToId ? { reply_to_id: input.replyToId } : {}), access_token: accessToken }),
       signal: AbortSignal.timeout(30_000)
     });
   } catch (error) {
@@ -212,6 +214,27 @@ export async function fetchPublishingLimit(input: PublishingLimitInput): Promise
     const entry = Array.isArray(body?.data) ? body.data[0] : body;
     const quotaUsage = typeof entry?.quota_usage === 'number' ? entry.quota_usage : null;
     const quotaTotal = typeof entry?.config?.quota_total === 'number' ? entry.config.quota_total : null;
+    return { quotaUsage, quotaTotal, remaining: quotaUsage === null || quotaTotal === null ? null : Math.max(0, quotaTotal - quotaUsage) };
+  } catch {
+    return { quotaUsage: null, quotaTotal: null, remaining: null };
+  }
+}
+
+/** Kuota balasan Meta (1.000/24 jam) — terpisah dari kuota post. */
+export async function fetchReplyPublishingLimit(input: PublishingLimitInput): Promise<{ quotaUsage: number | null; quotaTotal: number | null; remaining: number | null }> {
+  const transport = input.transport ?? fetch;
+  try {
+    const response = await transport(
+      `${THREADS_BASE_URL}/${input.credentials.userId}/threads_publishing_limit?fields=reply_quota_usage,reply_config&access_token=${encodeURIComponent(input.credentials.accessToken)}`,
+      { signal: AbortSignal.timeout(30_000) }
+    );
+    const body = await safeJson(response) as {
+      data?: Array<{ reply_quota_usage?: number; reply_config?: { quota_total?: number } }>;
+      reply_quota_usage?: number; reply_config?: { quota_total?: number };
+    };
+    const entry = Array.isArray(body?.data) ? body.data[0] : body;
+    const quotaUsage = typeof entry?.reply_quota_usage === 'number' ? entry.reply_quota_usage : null;
+    const quotaTotal = typeof entry?.reply_config?.quota_total === 'number' ? entry.reply_config.quota_total : null;
     return { quotaUsage, quotaTotal, remaining: quotaUsage === null || quotaTotal === null ? null : Math.max(0, quotaTotal - quotaUsage) };
   } catch {
     return { quotaUsage: null, quotaTotal: null, remaining: null };

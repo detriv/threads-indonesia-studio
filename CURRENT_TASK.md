@@ -1,6 +1,13 @@
 # CURRENT TASK
 
-## Checkpoint terbaru — Fase 4A (discovery + skor + review): LIVE VERIFIED
+## Checkpoint terbaru — Fase 4B (reply Threads): IMPLEMENTED / LIVE VERIFICATION PENDING
+
+**Fase: 4B — IMPLEMENTED.** Antrean balasan, worker 2 langkah (`reply_to_id`), API `/api/threads/replies/*`, panel Balasan di Publikasi; **live balasan MATI** (runtime: enqueue → `REQUIRES_LIVE`). Balasan nyata BELUM ada: token belum punya `threads_manage_replies` → perlu re-OAuth + live balasan diaktifkan operator. Fase 4A LIVE VERIFIED; Fase 0/1/3 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING.
+
+- Ditambahkan: migrasi `008_threads_reply.sql`; kontrak reply; `ReplyRepository`; worker `reply-processor` + dispatcher; `publishTextPost` kini menerima `replyToId`; API reply routes; panel Balasan.
+- Gate: lint/typecheck 0; 89 unit + 113 integrasi PASS.
+- Batas: live balasan terpisah dari post; jeda terpisah; anti-duplikat `(reply_to_id, text)`; kuota Meta reply 1.000/24 jam; `REPLIED` wajib `media_id`.
+- Next: re-OAuth untuk scope `threads_manage_replies` + `threads_read_replies`, lalu uji 1 balasan live dengan izin eksplisit.
 
 **Fase: 4A — LIVE VERIFIED.** Discovery RSS 5 sumber, skor relevansi, kandidat → draft `TREN_RELEVAN` → review; live posting tetap MATI. 4B (reply) belum dimulai. Fase 0/1/3 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING. Branch `main`.
 

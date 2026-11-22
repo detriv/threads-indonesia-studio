@@ -13,7 +13,7 @@ export const THREADS_MAX_TEXT = 500 as const;
 export const THREADS_PUBLISH_WAIT_MS = 30_000 as const;
 export const THREADS_STATUS_POLL_MS = 60_000 as const;
 export const THREADS_STATUS_POLL_MAX = 5 as const;
-export const THREADS_SCOPES = ['threads_basic', 'threads_content_publish'] as const;
+export const THREADS_SCOPES = ['threads_basic', 'threads_content_publish', 'threads_manage_replies', 'threads_read_replies'] as const;
 
 export const threadsConnectionStatusSchema = z.enum([
   'DISCONNECTED', 'CONNECTED', 'TOKEN_EXPIRED', 'AUTH_ERROR', 'SCOPE_MISSING', 'RATE_LIMITED', 'NOT_CONFIGURED'
@@ -181,6 +181,44 @@ export const integrationStatusSchema = z.object({
   }
 });
 export type IntegrationStatus = z.infer<typeof integrationStatusSchema>;
+
+// ===== Phase 4B: balasan Threads =====
+export const THREADS_REPLY_JOB_NAME = 'threads.publish-reply' as const;
+/** Balasan memakai endpoint yang sama dengan post, ditambah reply_to_id. */
+export const THREADS_REPLY_TEXT_MAX = THREADS_MAX_TEXT;
+export const replyStatusSchema = z.enum([
+  'QUEUED', 'CONTAINER_CREATED', 'REPLIED', 'NEEDS_REVIEW', 'FAILED', 'DUPLICATE', 'REQUIRES_LIVE'
+]);
+export type ReplyStatus = z.infer<typeof replyStatusSchema>;
+
+export const replyQueueItemSchema = z.object({
+  id: z.string(),
+  replyToId: z.string().min(1),
+  text: z.string().min(1),
+  status: replyStatusSchema,
+  containerId: z.string().nullable(),
+  mediaId: z.string().nullable(),
+  attemptCount: z.number().int().nonnegative(),
+  lastErrorCode: z.string().nullable(),
+  lastError: z.string().nullable(),
+  requestedBy: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string()
+});
+export type ReplyQueueItem = z.infer<typeof replyQueueItemSchema>;
+
+export const replySettingsSchema = z.object({
+  paused: z.boolean(),
+  livePosting: z.boolean(),
+  dailyLimit: z.number().int().min(1).max(100),
+  quotaUsage: z.number().int().nonnegative().nullable(),
+  quotaTotal: z.number().int().positive().nullable(),
+  quotaSyncedAt: z.string().nullable()
+});
+export type ReplySettings = z.infer<typeof replySettingsSchema>;
+
+export const replyJobDataSchema = z.object({ queueId: z.uuid() });
+export type ReplyJobData = z.infer<typeof replyJobDataSchema>;
 
 /** Status integrasi Phase 1 yang jujur: tidak ada koneksi Meta/Gemini dan tidak ada posting live. */
 export const PHASE1_INTEGRATION_STATUS: IntegrationStatus = {

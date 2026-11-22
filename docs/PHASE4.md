@@ -4,6 +4,8 @@ Bertahap: **4A** discovery + skor + review dulu, **4B** reply kemudian.
 
 **Status: 4A = LIVE VERIFIED (2026-11-22).** Discovery nyata 5 sumber RSS: 215 item, 115 baru, 5 draft kandidat, 0 kegagalan; UI menu Tren terverifikasi di DOM. Gate: 89 unit + 101 integrasi PASS. Live posting tetap MATI.
 
+**Status: 4B = IMPLEMENTED / LIVE VERIFICATION PENDING (2026-11-22).** Antrean balasan + worker 2 langkah (`reply_to_id`) + API `/api/threads/replies/*` + panel Balasan di halaman Publikasi. Verifikasi runtime: enqueue → worker → `REQUIRES_LIVE` (live balasan MATI), tanpa balasan nyata; UI terverifikasi di DOM. Gate: 89 unit + 113 integrasi PASS. **Belum ada balasan nyata**: token saat ini belum punya `threads_manage_replies` → perlu re-OAuth + live balasan diaktifkan operator.
+
 Keputusan operator (2026-11-22):
 - Sumber: RSS portal berita Indonesia (detik, Kompas, CNN Indonesia, Antara, Republika). Threads app trends dipakai bila ada API resmi.
 - Alur: skor ≥ ambang → otomatis jadi draft `TREN_RELEVAN` → **tetap lewat review** (tidak pernah terkirim otomatis).

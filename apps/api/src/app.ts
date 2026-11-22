@@ -5,7 +5,7 @@ import Fastify from 'fastify';
 import type { FastifyServerOptions } from 'fastify';
 import cookie from '@fastify/cookie';
 import { hashSessionToken } from '@threads-id/db';
-import type { DraftRepository, EditorialRepository, ScheduleRepository, ThreadsRepository, TrendRepository } from '@threads-id/db';
+import type { DraftRepository, EditorialRepository, ReplyRepository, ScheduleRepository, ThreadsRepository, TrendRepository } from '@threads-id/db';
 import { DEMO_EDITORIAL_SAMPLE, DEMO_JOB_NAME } from '@threads-id/contracts';
 import type { DemoAction, DemoJobData } from '@threads-id/contracts';
 import { registerAuthRoutes, type AuthLike } from './auth-routes.js';
@@ -15,6 +15,7 @@ import { registerScheduleRoutes } from './schedule-routes.js';
 import { registerHistoryRoutes } from './history-routes.js';
 import { registerThreadsRoutes } from './threads-routes.js';
 import { registerTrendRoutes } from './trend-routes.js';
+import { registerReplyRoutes } from './reply-routes.js';
 import { createRateLimiter, type RateLimiter } from './rate-limit.js';
 
 type Repo = {
@@ -35,6 +36,7 @@ export type AppDeps = {
   schedule?: ScheduleRepository;
   threads?: ThreadsRepository;
   trends?: TrendRepository;
+  replies?: ReplyRepository;
   sessionTtlMs?: number;
   cookieSecure?: boolean;
   rateLimiter?: RateLimiter;
@@ -87,6 +89,7 @@ export function buildApp(deps: AppDeps) {
   if (deps.schedule) registerHistoryRoutes(app, deps.schedule, { threads: deps.threads });
   if (deps.threads) registerThreadsRoutes(app, deps.threads);
   if (deps.trends) registerTrendRoutes(app, deps.trends);
+  if (deps.replies) registerReplyRoutes(app, deps.replies);
   app.post('/api/demo/actions', async (_request, reply) => {
     const actionId = randomUUID();
     await deps.repo.create(actionId);

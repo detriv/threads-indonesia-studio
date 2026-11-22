@@ -8,6 +8,7 @@ export * from './drafts.js';
 export * from './schedule.js';
 export * from './threads.js';
 export * from './trend.js';
+export * from './reply.js';
 
 const { Pool } = pg;
 export type { DemoResult } from '@threads-id/contracts';

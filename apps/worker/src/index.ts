@@ -5,12 +5,13 @@ import { GENERATION_JOB_NAME } from '@threads-id/contracts';
 import { GenerationRepository } from '@threads-id/db';
 import { PgBoss } from 'pg-boss';
 import { readFileSync } from 'node:fs';
-import { DEMO_JOB_NAME, demoJobDataSchema, SCHEDULE_JOB_NAME, scheduleJobDataSchema, THREADS_JOB_NAME, TREND_JOB_NAME, trendJobDataSchema } from '@threads-id/contracts';
-import { ActionRepository, DraftRepository, EditorialRepository, ScheduleRepository, ThreadsRepository, TrendRepository, createPool } from '@threads-id/db';
+import { DEMO_JOB_NAME, demoJobDataSchema, SCHEDULE_JOB_NAME, scheduleJobDataSchema, THREADS_JOB_NAME, THREADS_REPLY_JOB_NAME, TREND_JOB_NAME, trendJobDataSchema, replyJobDataSchema } from '@threads-id/contracts';
+import { ActionRepository, DraftRepository, EditorialRepository, ReplyRepository, ScheduleRepository, ThreadsRepository, TrendRepository, createPool } from '@threads-id/db';
 import { processDemoAction } from './processor.js';
 import { createSimulationAdapter, processScheduleJob, type ThreadsPublishAdapter } from './schedule-processor.js';
 import { dispatchOutbox } from './dispatcher.js';
 import { dispatchThreadsPublish, processThreadsPublish } from './threads-processor.js';
+import { dispatchThreadsReplies, processThreadsReply } from './reply-processor.js';
 import { processTrendDiscovery, dispatchTrendRuns } from './trend-processor.js';
 
 if (process.env.DEMO_MODE !== 'true') throw new Error('Phase 1 hanya boleh berjalan dengan DEMO_MODE=true (simulasi, tanpa publikasi live)');
@@ -22,6 +23,7 @@ const scheduleRepo = new ScheduleRepository(pool);
 const generationRepo = new GenerationRepository(pool);
 const threadsRepo = new ThreadsRepository(pool);
 const trendRepo = new TrendRepository(pool);
+const replyRepo = new ReplyRepository(pool);
 const editorial = new EditorialRepository(pool);
 const drafts = new DraftRepository(pool);
 const adapter = createSimulationAdapter();
@@ -50,6 +52,7 @@ await withRetry('createQueue', async () => {
   await boss.createQueue(SCHEDULE_JOB_NAME);
   await boss.createQueue(THREADS_JOB_NAME);
   await boss.createQueue(TREND_JOB_NAME);
+  await boss.createQueue(THREADS_REPLY_JOB_NAME);
 });
 await boss.work<{requestId:string}>(GENERATION_JOB_NAME,{batchSize:1},async jobs=>{
  for(const job of jobs)await processGeneration(job.data.requestId,generationRepo,(input,context,model,provider)=>generateForProvider(input,context,model,provider,{allowed:process.env.GEMINI_ALLOW_OUTBOUND==='true',key:process.env.GEMINI_API_KEY}));
@@ -108,6 +111,16 @@ await boss.work(THREADS_JOB_NAME, { batchSize: 1 }, async (jobs) => {
   }
 });
 
+await boss.work(THREADS_REPLY_JOB_NAME, { batchSize: 1 }, async (jobs) => {
+  for (const job of jobs) {
+    const { queueId } = replyJobDataSchema.parse(job.data);
+    await processThreadsReply(queueId, {
+      replies: replyRepo, threads: threadsRepo,
+      live: async () => (await replyRepo.getSettings()).livePosting
+    });
+  }
+});
+
 await boss.work(TREND_JOB_NAME, { batchSize: 1 }, async (jobs) => {
   for (const job of jobs) {
     const data = trendJobDataSchema.parse(job.data);
@@ -141,7 +154,7 @@ let dispatching = false;
 const dispatchTimer = setInterval(() => {
   if (dispatching) return;
   dispatching = true;
-  void Promise.all([dispatchOutbox(pool, boss),dispatchGenerations(),dispatchThreadsPublish(threadsRepo,boss,pool),dispatchTrendRuns(trendRepo,boss,pool)])
+  void Promise.all([dispatchOutbox(pool, boss),dispatchGenerations(),dispatchThreadsPublish(threadsRepo,boss,pool),dispatchTrendRuns(trendRepo,boss,pool),dispatchThreadsReplies(replyRepo,boss,pool)])
     .catch((error) => console.error('Dispatcher outbox gagal:', error instanceof Error ? error.message : error))
     .finally(() => { dispatching = false; });
 }, 1000);
@@ -152,6 +165,7 @@ await withRetry('dispatcher awal', async () => {
   await dispatchGenerations();
   await dispatchThreadsPublish(threadsRepo, boss, pool);
   await dispatchTrendRuns(trendRepo, boss, pool);
+  await dispatchThreadsReplies(replyRepo, boss, pool);
 }, 5, 1000);
 
 console.log('Worker DEMO + jadwal simulasi + Threads publish siap.');

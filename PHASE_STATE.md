@@ -23,7 +23,7 @@ Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertah
 | Phase 1 — Dashboard editorial | COMPLETE | `7bea826`; 17 unit + 52 integrasi, lint/typecheck/build/audit, Docker smoke/restart, QA browser fixture, review independen PASS; QA manual pengguna PASS (login dan dialog native) |
 | Fase 2 — Konten Gemini | IMPLEMENTED / LIVE VERIFICATION PENDING | 35 unit + 69 integrasi PostgreSQL PASS; lint/typecheck/build 5 workspace/audit 0, Docker smoke/restart terisolasi PASS; browser fixture generate/revise/failure/fallback PASS. Runtime `6ea5314`; review parent dan independen approved. Live Gemini PENDING (key/izin belum tersedia). |
 | Fase 3 — Posting Threads | COMPLETE | Kontrak + migrasi `006_threads_publish.sql` + API `/api/threads/*` + worker 2 langkah + UI Publikasi; 80 unit + 89 integrasi PASS; live terverifikasi **3 post nyata PUBLISHED**; review independen dilaporkan operator lolos semua |
-| Fase 4 — Tren, reply, discovery | 4A LIVE VERIFIED / 4B BELUM | Discovery 5 sumber RSS + skor 0–100 + kandidat → draft `TREN_RELEVAN` → review; 89 unit + 101 integrasi PASS; 215 item & 5 draft kandidat nyata; reply (4B) belum |
+| Fase 4 — Tren, reply, discovery | 4A LIVE VERIFIED / 4B IMPLEMENTED (live reply pending) | 4A: discovery 5 sumber RSS + skor 0–100 + kandidat → draft `TREN_RELEVAN` → review; 4B: antrean balasan + worker `reply_to_id` + API `/api/threads/replies/*` + panel Balasan; 89 unit + 113 integrasi PASS; balasan nyata PENDING (re-OAuth + izin live) |
 | Fase Z — Multi API Key Rotasi | NOT STARTED (extendable) | Hanya setelah Fase 2 live PASS + persetujuan operator |
 
 ## Fase 2 — reviewer blockers follow-up
