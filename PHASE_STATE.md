@@ -1,8 +1,8 @@
 # PHASE STATE
 
-## Checkpoint terbaru — Fase 3 Posting Threads: LIVE VERIFIED
+## Checkpoint terbaru — Fase 3 Posting Threads: COMPLETE
 
-Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase 3 = LIVE VERIFIED** (3 post nyata terbit, media_id + permalink tervalidasi Meta), HEAD `55658a0`; Fase 2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING.
+Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase 3 = COMPLETE** (live terverifikasi 3 post nyata + review independen dilaporkan operator lolos semua, 2026-11-22), HEAD `83b4309`; Fase 2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING.
 
 - Kredensial: App ID `1002284449005696`; akun `@lorem_ipsum7777`; user_id kanonik `29713621341597282`; token long-lived s/d 2027-01-21; scope `threads_basic,threads_content_publish`.
 - **Post nyata**: `18033566909883283` (DgBw9cAEh37), `18114336386231777` (DgBxKWAkpxb), `17949796110358338` (DgBxqDnkjxK) — semua status `PUBLISHED`.
@@ -22,7 +22,7 @@ Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertah
 | Phase 0 — fondasi + simulasi | COMPLETE | lint, typecheck, 4 tests, build, audit, Docker E2E, browser UI, editorial payload, restart persistence passed |
 | Phase 1 — Dashboard editorial | COMPLETE | `7bea826`; 17 unit + 52 integrasi, lint/typecheck/build/audit, Docker smoke/restart, QA browser fixture, review independen PASS; QA manual pengguna PASS (login dan dialog native) |
 | Fase 2 — Konten Gemini | IMPLEMENTED / LIVE VERIFICATION PENDING | 35 unit + 69 integrasi PostgreSQL PASS; lint/typecheck/build 5 workspace/audit 0, Docker smoke/restart terisolasi PASS; browser fixture generate/revise/failure/fallback PASS. Runtime `6ea5314`; review parent dan independen approved. Live Gemini PENDING (key/izin belum tersedia). |
-| Fase 3 — Posting Threads | LIVE VERIFIED | Kontrak + migrasi `006_threads_publish.sql` + API `/api/threads/*` + worker 2 langkah + UI Publikasi; 80 unit + 89 integrasi PASS; live default mati; **3 post nyata PUBLISHED** (media_id + permalink tervalidasi Meta) |
+| Fase 3 — Posting Threads | COMPLETE | Kontrak + migrasi `006_threads_publish.sql` + API `/api/threads/*` + worker 2 langkah + UI Publikasi; 80 unit + 89 integrasi PASS; live terverifikasi **3 post nyata PUBLISHED**; review independen dilaporkan operator lolos semua |
 | Fase 4–6 | NOT STARTED | Lihat `docs/ROADMAP.md` |
 | Fase Z — Multi API Key Rotasi | NOT STARTED (extendable) | Hanya setelah Fase 2 live PASS + persetujuan operator |
 

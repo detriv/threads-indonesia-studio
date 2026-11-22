@@ -1,14 +1,14 @@
 # Changelog
 
-## Fase 3 — Posting Threads: LIVE VERIFIED (post nyata terbit)
+## Fase 3 — Posting Threads: COMPLETE
 
 - Ditambahkan: kontrak Meta Threads (job name, batas 500 char, wait 30s, scope `threads_basic`+`threads_content_publish`), migrasi `006_threads_publish.sql`, API `/api/threads/*` (status koneksi, OAuth URL, callback GET publik + POST, toggle live, antrean publish, rekonsiliasi), worker 2 langkah container→publish, UI halaman Publikasi.
 - Perilaku: live mati default → antrean `REQUIRES_LIVE` (tanpa post nyata); live aktif → `QUEUED` → `PUBLISHED` (media_id wajib) / `NEEDS_REVIEW` (ambigu after-send, rekonsiliasi operator) / `FAILED`.
 - **Live verified**: akun `@lorem_ipsum7777` (user_id kanonik `29713621341597282`), token long-lived s/d 2027-01-21. Tiga post nyata status `PUBLISHED` dengan permalink tervalidasi Meta: `18033566909883283` (DgBw9cAEh37), `18114336386231777` (DgBxKWAkpxb), `17949796110358338` (DgBxqDnkjxK).
-- Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip. Commit `55658a0`.
-- Perbaikan saat live: ID kanonik diambil dari `GET /me` (token-exchange berbeda); `published_url` memakai permalink asli `threads.com/@<user>/post/<shortcode>`; dispatcher publish mengecek job aktif agar tidak mengirim duplikat tiap detik.
+- Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip. Commit `55658a0`; UI fix `83b4309`.
+- Perbaikan saat live: ID kanonik diambil dari `GET /me` (token-exchange berbeda); `published_url` memakai permalink asli `threads.com/@<user>/post/<shortcode>`; dispatcher publish mengecek job aktif agar tidak mengirim duplikat tiap detik; panel Konten Gemini hanya di menu Draft.
 - QA runtime nyata (stack terisolasi port 18093, live MATI): 12/12 skrip + browser Publikasi; antrean `REQUIRES_LIVE`, 0 panggilan Meta.
-- Catatan: live masih **ON**; matikan lewat dashboard bila tidak dipakai. Belum COMPLETE (review independen belum ada); tidak push.
+- **Review independen dilaporkan operator: lolos semua (2026-11-22) → Fase 3 COMPLETE.** Catatan: live saat ini ON; matikan via dashboard bila tidak dipakai; data draft pernah dibersihkan atas permintaan operator (3 post tetap hidup di Threads).
 
 ## Checkpoint terbaru — adaptasi teks prompt/chat (working tree, belum commit)
 

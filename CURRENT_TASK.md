@@ -1,8 +1,8 @@
 # CURRENT TASK
 
-## Checkpoint terbaru — Fase 3 Posting Threads: LIVE VERIFIED
+## Checkpoint terbaru — Fase 3 Posting Threads: COMPLETE
 
-**Fase: 3 — Posting Threads. LIVE VERIFIED (post nyata terbit), belum COMPLETE (review independen belum ada).** Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING. Branch `main`, HEAD `55658a0`.
+**Fase: 3 — Posting Threads. COMPLETE.** Live terverifikasi (3 post nyata terbit) + review independen dilaporkan operator **lolos semua** (2026-11-22). Fase 0/1/3 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING. Branch `main`, HEAD `83b4309`.
 
 - Kredensial: App ID `1002284449005696`; akun `@lorem_ipsum7777`; user_id kanonik `29713621341597282`; token long-lived s/d 2027-01-21; scope `threads_basic,threads_content_publish`; kuota 250/24 jam.
 - **Post nyata terbit (live)**: 3 baris `PUBLISHED` dengan media_id + permalink tervalidasi dari Meta:
@@ -11,8 +11,8 @@
   - `17949796110358338` → https://www.threads.com/@lorem_ipsum7777/post/DgBxqDnkjxK
 - Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip.
 - Temuan & perbaikan saat verifikasi live: ID token-exchange (`…280`) ≠ ID kanonik (`…282`) → ambil dari `GET /me`; `published_url` memakai permalink asli `threads.com/@<user>/post/<shortcode>`; dispatcher publish kini mengecek job aktif agar tidak mengirim duplikat tiap detik.
-- Live sekarang **OFF** (`live_posting=false`); nyalakan lewat dashboard (Publikasi → "Aktifkan live") bila akan posting lagi. Akun Threads harus publik; invite tester harus di-Accept di Settings → Account → Website permissions.
-- Next exact action: review independen + keputusan COMPLETE. Jangan push/deploy ke main tanpa persetujuan.
+- Live saat ini **ON** (`live_posting=true`, 1 draft tersimpan); matikan lewat dashboard (Publikasi) bila tidak dipakai. Akun Threads harus publik; invite tester harus di-Accept di Settings → Account → Website permissions.
+- Next exact action: Fase 3 selesai. Pilihan berikutnya: (a) matikan live & rapikan data, (b) lanjut Fase 4, atau (c) push branch. Jangan push/deploy ke main tanpa persetujuan.
 - **Pembersihan data (permintaan operator):** semua data draft + antrean + attempt dihapus (drafts 12, publish_queue 4, publish_attempts 6, generation_requests 10, schedule_entries 4 → semua 0). Koneksi Threads tetap; `live_posting=false`. Tiga post uji tetap hidup di Threads.
 
 - Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.

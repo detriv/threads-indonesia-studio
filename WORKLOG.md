@@ -2,7 +2,7 @@
 
 ## Fase 3 — verifikasi LIVE Meta Threads (post nyata terbit)
 
-**Fase3 = LIVE VERIFIED**, bukan COMPLETE (review independen belum ada). HEAD `55658a0`; branch `main`; stack utama 8080 diredeploy ke image baru; `.env` mode 0600; live **ON** atas izin eksplisit operator.
+**Fase3 = COMPLETE** (live terverifikasi + review independen operator lolos semua, 2026-11-22). HEAD `83b4309`; branch `main`; stack utama 8080 diredeploy ke image baru; `.env` mode 0600; live **ON** (1 draft tersimpan).
 
 - Kredensial: App ID `1002284449005696`; akun Threads `@lorem_ipsum7777`; **user_id kanonik `29713621341597282`**; token long-lived s/d 2027-01-21; scope `threads_basic,threads_content_publish`. Token live disimpan file `0600` di worker (`/tmp/threads-token/token`, 185 char); DB hanya presence + expiry. Token lama yang invalid di `.env` dikosongkan agar tidak menimpa token OAuth.
 - **Post nyata 3 baris `PUBLISHED`** (media_id + permalink diambil dari Meta, bukan diprediksi): `18033566909883283` → `https://www.threads.com/@lorem_ipsum7777/post/DgBw9cAEh37`; `18114336386231777` → `.../DgBxKWAkpxb`; `17949796110358338` → `.../DgBxqDnkjxK`.
@@ -11,6 +11,7 @@
 - Alur operator: halaman Publikasi → "Buka halaman OAuth Meta" → login Threads → Authorize → callback publik menyimpan koneksi → toggle live ON → kirim antrean. Syarat Meta: akun Threads **publik** dan invite tester di-Accept di Settings → Account → Website permissions (error `1349245` bila belum).
 - Next exact action: review independen + keputusan COMPLETE. Matikan live via dashboard bila tidak dipakai. Jangan push tanpa persetujuan.
 - **Pembersihan data (permintaan operator, 2026-11-22):** semua data draft dihapus — `drafts` 12, `publish_queue` 4, `publish_attempts` 6, `generation_requests` 10, `generation_attempts` 10, `schedule_entries` 4, `schedule_executions` 5, `schedule_versions` 6 → semua 0. Koneksi Threads **tetap** (user_id `29713621341597282`, token valid s/d 2027-01-21) dan `live_posting=false`. Tiga post di atas **tetap hidup di Threads**; hanya baris antreannya yang hilang, media_id + permalink tercatat di WORKLOG/CHANGELOG ini.
+- **Penutup (2026-11-22):** operator melaporkan review independen **lolos semua** → **Fase 3 = COMPLETE**. Sebelumnya live sudah terverifikasi 3 post nyata, gate 80 unit + 89 integrasi PASS, dan UI fix panel Gemini (commit `83b4309`).
 
 
 ## Klarifikasi pengguna — prompt/chat Gemini menjadi teks draft/caption (working tree)

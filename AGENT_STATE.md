@@ -1,8 +1,8 @@
 # AGENT STATE
 
-## Checkpoint terbaru — Fase 3 Posting Threads: LIVE VERIFIED
+## Checkpoint terbaru — Fase 3 Posting Threads: COMPLETE
 
-Bagian ini status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase 3 = LIVE VERIFIED** (3 post nyata terbit, media_id + permalink tervalidasi Meta), HEAD `55658a0`; Fase 2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING. Belum COMPLETE (review independen belum ada); tidak push.
+Bagian ini status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase 3 = COMPLETE** (live terverifikasi 3 post nyata + review independen dilaporkan operator lolos semua, 2026-11-22), HEAD `83b4309`; Fase 2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING.
 
 - Kredensial: App ID `1002284449005696`; akun `@lorem_ipsum7777`; user_id kanonik `29713621341597282`; token long-lived s/d 2027-01-21; scope `threads_basic,threads_content_publish`.
 - Post nyata: `18033566909883283` (DgBw9cAEh37), `18114336386231777` (DgBxKWAkpxb), `17949796110358338` (DgBxqDnkjxK) — semua `PUBLISHED`.
@@ -10,9 +10,9 @@ Bagian ini status saat ini; histori checkpoint/provider di bawah dipertahankan. 
 - Idempotensi: klaim atomik antrean; ambigu → NEEDS_REVIEW; konkuren 2 proses → 1 panggilan container; dispatcher publish kini tidak mengirim job duplikat.
 - Keamanan: token Meta TIDAK masuk DB (presence + expiry); token file `0600` di worker; dashboard tidak pernah menampilkan token/secret.
 - Live masih **ON**; matikan lewat dashboard (Publikasi) bila tidak dipakai. Syarat Meta: akun Threads publik + invite tester di-Accept di Settings → Account → Website permissions.
-- Next exact action: review independen + keputusan COMPLETE; jangan push tanpa persetujuan.
+- Next exact action: Fase 3 selesai; pilihan berikutnya (matikan live & rapikan data / lanjut Fase 4 / push) menunggu keputusan operator. Jangan push tanpa persetujuan.
 
-- Fase aktif: **3 — Posting Threads / LIVE VERIFIED (3 post nyata PUBLISHED)**. Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING; Fase 4–6 dan Z NOT STARTED.
+- Fase aktif: **3 — Posting Threads / COMPLETE** (live terverifikasi + review independen operator lolos semua). Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING; Fase 4–6 dan Z NOT STARTED.
 
 - Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.
 - Final gates aktual: `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0, **62unit/behavior+71integrasi PostgreSQL**,0gagal/skip,5workspace build/typecheckPASS,audit0. Tests transport adalah mock lokal, bukan Gemini nyata. RED/GREEN rinci ada di WORKLOG.
