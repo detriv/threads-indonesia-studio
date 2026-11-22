@@ -22,14 +22,22 @@ export function registerHistoryRoutes(app: FastifyInstance, schedule: ScheduleRe
 
   app.get('/api/integrations', async () => {
     const threads = await (deps.threads?.getConnection() ?? null);
-    const livePosting = Boolean(threads?.livePosting ?? threadsEnv().livePosting);
+    const env = threadsEnv();
+    const liveEnabled = Boolean(threads?.livePosting ?? env.livePosting);
+    // Jujur: "terhubung/live siap" hanya bila live aktif DAN kredensial + token tersedia.
+    const credentialsReady = Boolean(
+      (threads?.appId ?? env.appId) && (threads?.accessTokenPresent ?? Boolean(env.accessToken)) && (threads?.userId ?? env.userId)
+    );
+    const livePosting = liveEnabled && credentialsReady;
     const metaItem = {
       id: 'meta-threads',
       name: 'Meta Threads (publikasi)',
       connected: livePosting,
       mode: livePosting ? 'LIVE_TEREKONKSI' : 'BELUM_LIVE',
-      note: livePosting
-        ? 'Publikasi live diaktifkan operator. Posting masih memerlukan token berlaku dan kuota Meta; hasil posting live tetap direview sebelum eksekusi.'
+      note: liveEnabled
+        ? (credentialsReady
+          ? 'Publikasi live diaktifkan operator dengan kredensial terpasang. Posting masih memerlukan token berlaku dan kuota Meta; hasil posting live tetap direview sebelum eksekusi.'
+          : 'Live diaktifkan, tapi kredensial/token Meta belum lengkap. Antrean akan gagal CONFIG sampai THREADS_APP_ID/SECRET/USER_ID/ACCESS_TOKEN diisi.')
         : 'Belum terhubung. OAuth Meta dan publikasi live adalah cakupan Fase 3. Selama live nonaktif, eksekusi jadwal adalah simulasi lokal dengan ID semu berprefiks sim-, bukan post nyata.'
     };
     const geminiItem = {

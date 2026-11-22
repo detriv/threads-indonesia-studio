@@ -155,6 +155,17 @@ describe('Meta Threads API (PostgreSQL, transport dimock)', () => {
     await app.close();
   });
 
+  it('live diaktifkan tanpa kredensial → status tetap jujur BELUM_LIVE/SIMULASI', async () => {
+    const app = makeApp();
+    const { cookie } = await adminLogin(app);
+    await threads.upsertConnection({ appId: undefined, appSecretPresent: false, userId: undefined, accessTokenPresent: false, status: 'DISCONNECTED', livePosting: true, scopes: 'threads_basic,threads_content_publish' });
+    const body = (await app.inject({ method: 'GET', url: '/api/integrations', headers: { cookie } })).json();
+    expect(body).toMatchObject({ mode: 'SIMULASI', livePosting: false });
+    expect(body.integrations[0]).toMatchObject({ id: 'meta-threads', connected: false, mode: 'BELUM_LIVE' });
+    expect(body.integrations[0].note).toContain('kredensial');
+    await app.close();
+  });
+
   it('integrasi: live aktif tampil jujur; mati tetap SIMULASI', async () => {
     const app = makeApp();
     const { cookie } = await adminLogin(app);
