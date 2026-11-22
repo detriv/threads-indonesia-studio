@@ -92,10 +92,18 @@ export function registerThreadsRoutes(app: FastifyInstance, threads: ThreadsRepo
     };
   });
 
-  /** Endpoint callback publik untuk redirect Meta (tanpa sesi admin; code dipakai sekali). */
+  /** Endpoint callback publik untuk redirect Meta (tanpa sesi admin; code sekali pakai). */
   app.get('/api/threads/oauth-callback', async (request, reply) => {
-    const query = request.query as { code?: string; error?: string };
-    if (!query.code) return reply.code(400).send({ error: query.error ?? 'Code OAuth tidak ada.' });
+    const query = request.query as { code?: string; error?: string; error_reason?: string; error_description?: string };
+    if (!query.code) {
+      const detail = query.error_description ?? query.error_reason ?? query.error ?? 'Code tidak ada';
+      return reply.code(400).type('text/html; charset=utf-8').send(
+        `<html lang="id"><body style="font-family:system-ui;max-width:40rem;margin:3rem auto;padding:0 1rem">
+<h1>OAuth Threads gagal</h1><p>${String(detail).replace(/[<>&]/g, '')}</p>
+<p>Consent belum selesai. Buka dashboard → <b>Publikasi</b> → <b>Buka halaman OAuth Meta</b>, lalu klik <b>Authorize</b>.</p>
+<p><a href="http://127.0.0.1:8080/">Kembali ke dashboard</a></p></body></html>`
+      );
+    }
     const env = threadsEnv();
     if (!env.appId || !env.appSecret) return reply.code(400).send({ error: 'THREADS_APP_ID/THREADS_APP_SECRET belum diisi di server.' });
     let token: { accessToken: string; expiresIn: number | null; userId: string };
