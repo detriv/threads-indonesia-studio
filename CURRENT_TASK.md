@@ -7,7 +7,8 @@
 - Done: kontrak Meta Threads + batas 500 char + scope granular; migrasi `006_threads_publish.sql` (threads_connection, publish_queue, publish_attempts + trigger guard); API `/api/threads/{connection,oauth-url,oauth-callback,live,publish,publish/:id/resolve}`; worker `threads-client` + `threads-processor` + dispatcher; adapter jadwal memilih simulasi vs Meta; UI halaman Publikasi.
 - Verifikasi nyata: lint/typecheck/test:all/build/audit/diff-check exit 0; **73 unit + 85 integrasi PostgreSQL PASS**, 0 gagal/skip.
 - Remaining: kredensial Meta (`THREADS_APP_ID/SECRET/USER_ID/ACCESS_TOKEN`) + izin eksplisit operator untuk live post uji. Live default MATI; antrean live-mati dicatat REQUIRES_LIVE, bukan post nyata.
-- Next exact action: commit fokus Fase 3 (kode), lalu commit dokumen terpisah. Jangan tandai COMPLETE sebelum ada post uji terbit di akun yang diizinkan.
+- Next exact action: live post uji hanya setelah kredensial Meta + izin operator. Jangan tandai COMPLETE sebelum post uji terbit.
+- **QA runtime nyata PASS** (port 18093, commit `5bd95f4`): 12/12 skrip + browser halaman Publikasi; live MATI → `REQUIRES_LIVE`, 0 panggilan Meta.
 
 - Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.
 - Final gates aktual: `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0, **62unit/behavior+71integrasi PostgreSQL**,0gagal/skip,5workspace build/typecheckPASS,audit0. Tests transport adalah mock lokal, bukan Gemini nyata. RED/GREEN rinci ada di WORKLOG.

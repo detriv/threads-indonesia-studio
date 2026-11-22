@@ -4,8 +4,10 @@
 
 - Ditambahkan: kontrak Meta Threads (job name, batas 500 char, wait 30s, scope `threads_basic`+`threads_content_publish`), migrasi `006_threads_publish.sql`, API `/api/threads/*` (status koneksi, OAuth URL, callback GET publik + POST, toggle live, antrean publish, rekonsiliasi), worker 2 langkah container→publish, UI halaman Publikasi.
 - Perilaku: live mati default → antrean `REQUIRES_LIVE` (tanpa post nyata); live aktif → `QUEUED` → `PUBLISHED` (media_id wajib) / `NEEDS_REVIEW` (ambigu after-send, rekonsiliasi operator) / `FAILED`.
-- Gate: lint/typecheck/build/audit/diff-check exit 0; **73 unit + 85 integrasi PostgreSQL PASS**, 0 gagal/skip.
-- Belum: kredensial Meta + post uji nyata. Tidak commit/push.
+- Gate: lint/typecheck/build/audit/diff-check exit 0; **73 unit + 87 integrasi PostgreSQL PASS**, 0 gagal/skip.
+- QA runtime nyata (stack terisolasi port 18093, live MATI): 12/12 skrip + browser Publikasi; antrean `REQUIRES_LIVE`, 0 panggilan Meta. Commit `5bd95f4`.
+- Perbaikan QA: worker tahan restart (RestartCount=0); status live jujur tanpa kredensial; fallback `THREADS_USER_ID/APP_ID` dari env.
+- Belum: kredensial Meta + post uji nyata. Tidak push.
 
 ## Checkpoint terbaru — adaptasi teks prompt/chat (working tree, belum commit)
 

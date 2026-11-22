@@ -526,3 +526,22 @@ Menghubungkan Meta Threads lewat OAuth resmi, posting manual dari dashboard, dan
 1. Commit fokus Fase 3 (kode) + commit dokumen terpisah.
 2. QA runtime stack terisolasi: login admin → halaman Publikasi → live MATI → antrean `REQUIRES_LIVE`, tanpa post nyata.
 3. Live post uji hanya setelah operator memberikan `THREADS_APP_ID/SECRET` + akun uji + izin eksplisit. Jangan tandai Fase 3 COMPLETE sebelum itu.
+
+### QA runtime nyata — stack terisolasi (live MATI)
+
+- Project `threads-phase3-qa-bf8b7b07`, port web **18093**, DB **15449**, volume & project sendiri; stack utama 8080 tidak disentuh. Image dibangun ulang dari commit `5bd95f4`.
+- Env QA: `GENERATION_PROVIDER=simulation`, `GEMINI_ALLOW_OUTBOUND=false`, `THREADS_LIVE_POSTING=false`, `THREADS_*` kosong. Kredensial admin QA di-hash Argon2id dan dipasang ke DB QA (bukan DB utama).
+- Hasil `node qa-phase3.mjs` → **12/12 PASS**: health; login admin; koneksi `NOT_CONFIGURED` + `livePosting:false`; respons koneksi tidak memuat token/secret; integrasi `SIMULASI`/`BELUM_LIVE`; draf dibuat; publish live-mati → antrean `REQUIRES_LIVE` + `lastErrorCode=LIVE_DISABLED` (tanpa post nyata); antrean & attempts terdaftar; `oauth-url` menolak tanpa `THREADS_APP_ID`; web UI tersaji; rute koneksi wajib sesi.
+- Browser (Chrome) ke `http://127.0.0.1:18093`: login form → nav `nav-publish` ada → halaman "PUBLIKASI THREADS" menampilkan "Live nonaktif", status koneksi (App ID belum diisi, Token belum ada, scope), draf, tombol "Catat antrean (live mati)", dan antrean `Manual · Live belum aktif` dengan pesan "Publikasi live belum diaktifkan operator; tidak ada post nyata."
+- **0 panggilan keluar ke graph.threads.net** pada QA ini.
+
+### Temuan & perbaikan selama QA
+
+- Worker crash-loop saat cold start (`ECONNREFUSED`/tabel belum ada) karena `boss.start()` dan dispatcher awal digaransi tanpa retry → ditambahkan `withRetry()` (pg-boss start, createQueue, dispatcher awal). Setelah perbaikan: **RestartCount=0** pada boot berikutnya.
+- Status "terhubung" sebelumnya hanya mengikuti flag live → bisa menampilkan terhubung walau kredensial kosong. Sekarang `livePosting` = live aktif **dan** kredensial/token ada; live aktif tanpa kredensial tetap `SIMULASI`/`BELUM_LIVE` dengan catatan jujur.
+- `THREADS_USER_ID`/`THREADS_APP_ID` sebelumnya hanya dibaca dari DB → worker gagal CONFIG bila operator mengisi env tanpa OAuth. Sekarang DB (OAuth) utama, env jadi fallback; `deps.token()` juga diakui sebagai bukti token.
+- Test baru: live tanpa kredensial tetap jujur; fallback env menghasilkan `PUBLISHED` (mock transport).
+
+### Next exact action (setelah QA)
+
+Commit dokumen QA ini; live post uji tetap menunggu kredensial Meta + izin operator. Fase 3 tetap IMPLEMENTED / LIVE VERIFICATION PENDING.

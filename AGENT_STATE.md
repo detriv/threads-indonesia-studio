@@ -10,6 +10,7 @@ Bagian ini status saat ini; histori checkpoint/provider di bawah dipertahankan. 
 - Keamanan: token Meta TIDAK masuk DB (hanya presence + expiry); token di file 0600 lewat volume `threads_token`; dashboard tidak pernah menampilkan token/secret.
 - Belum ada kredensial Meta lokal & belum ada post uji nyata. Kriteria "satu post uji terbit di akun yang diizinkan" masih PENDING.
 - Next exact action: commit fokus Fase 3 (kode) + commit dokumen terpisah; lalu QA runtime stack terisolasi dengan live MATI; live post uji baru dengan izin eksplisit operator.
+- **QA runtime nyata PASS** (stack terisolasi `threads-phase3-qa-bf8b7b07`, port 18093): 12/12 skrip + browser halaman Publikasi; live MATI → antrean `REQUIRES_LIVE`, 0 panggilan Meta. Commit `5bd95f4`.
 
 - Fase aktif: **3 — Posting Threads / IMPLEMENTED — LIVE VERIFICATION PENDING**. Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING; Fase 4–6 dan Z NOT STARTED.
 
