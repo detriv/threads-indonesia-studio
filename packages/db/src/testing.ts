@@ -53,6 +53,7 @@ export async function resetTestDatabase(url = TEST_DATABASE_URL): Promise<pg.Poo
 }
 
 const TABLES = [
+  'publish_attempts', 'publish_queue', 'threads_connection',
   'generation_attempts', 'generation_requests',
   'schedule_executions', 'schedule_outbox', 'schedule_entries', 'drafts',
   'review_topics', 'personal_sources', 'voice_examples', 'theme_examples', 'themes',

@@ -2,6 +2,39 @@ import { z } from 'zod';
 export * from './generation.js';
 
 export const DEMO_JOB_NAME = 'demo.synthetic-age-20s' as const;
+
+// ===== Phase 3: Meta Threads =====
+export const THREADS_JOB_NAME = 'threads.publish-text' as const;
+export const THREADS_BASE_URL = 'https://graph.threads.net/v1.0' as const;
+/** Meta: teks post maksimal 500 karakter; emoji dihitung sebagai byte UTF-8. */
+export const THREADS_MAX_TEXT = 500 as const;
+/** Meta merekomendasikan menunggu ~30 detik sebelum publish; polling status 1/menit, maksimal 5 menit. */
+export const THREADS_PUBLISH_WAIT_MS = 30_000 as const;
+export const THREADS_STATUS_POLL_MS = 60_000 as const;
+export const THREADS_STATUS_POLL_MAX = 5 as const;
+export const THREADS_SCOPES = ['threads_basic', 'threads_content_publish'] as const;
+
+export const threadsConnectionStatusSchema = z.enum([
+  'DISCONNECTED', 'CONNECTED', 'TOKEN_EXPIRED', 'AUTH_ERROR', 'SCOPE_MISSING', 'RATE_LIMITED', 'NOT_CONFIGURED'
+]);
+export type ThreadsConnectionStatus = z.infer<typeof threadsConnectionStatusSchema>;
+
+export const threadsPublishTriggerSchema = z.enum(['MANUAL', 'SCHEDULED']);
+export type ThreadsPublishTrigger = z.infer<typeof threadsPublishTriggerSchema>;
+export const publishStatusSchema = z.enum([
+  'QUEUED', 'CONTAINER_CREATED', 'PUBLISHED', 'NEEDS_REVIEW', 'FAILED', 'DUPLICATE', 'REQUIRES_LIVE'
+]);
+export type PublishStatus = z.infer<typeof publishStatusSchema>;
+
+/** Status eksekusi gabungan: simulasi Phase 1 + hasil posting live Phase 3. */
+export const executionStatusSchema = z.enum([
+  'SIMULATED_OK', 'PUBLISHED', 'SKIPPED_STALE', 'SKIPPED_CANCELLED', 'SKIPPED_PAUSED', 'SKIPPED_LIMIT',
+  'CANCELLED', 'FAILED', 'NEEDS_REVIEW', 'DUPLICATE', 'REQUIRES_LIVE'
+]);
+export type ExecutionStatus = z.infer<typeof executionStatusSchema>;
+export const PUBLISHED_EXECUTION_STATUSES = ['PUBLISHED', 'NEEDS_REVIEW', 'DUPLICATE', 'REQUIRES_LIVE'] as const;
+export type PublishedExecutionStatus = typeof PUBLISHED_EXECUTION_STATUSES[number];
+
 export const editorialSampleSchema = z.object({
   pillar: z.literal('KEBIASAAN_DIGITAL'),
   format: z.literal('OBSERVASI_PENDEK'),
@@ -95,12 +128,10 @@ export const draftStatusSchema = z.enum(['DRAFT', 'IN_REVIEW', 'APPROVED', 'SCHE
 export type DraftStatus = z.infer<typeof draftStatusSchema>;
 export const scheduleStatusSchema = z.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED']);
 export type ScheduleStatus = z.infer<typeof scheduleStatusSchema>;
-export const executionStatusSchema = z.enum([
-  'SIMULATED_OK', 'SKIPPED_STALE', 'SKIPPED_CANCELLED', 'SKIPPED_PAUSED', 'SKIPPED_LIMIT', 'CANCELLED', 'FAILED'
-]);
-export type ExecutionStatus = z.infer<typeof executionStatusSchema>;
+/** Didefinisikan di blok Phase 3 di atas; duplikat di sini dihapus. */
 
-export const SCHEDULE_JOB_NAME = 'schedule.simulate-publication' as const;
+export const SCHEDULE_JOB_NAME_V1 = 'schedule.simulate-publication' as const;
+export const SCHEDULE_JOB_NAME = SCHEDULE_JOB_NAME_V1;
 export const scheduleJobDataSchema = z.object({ scheduleId: z.uuid(), version: z.number().int().positive() });
 export type ScheduleJobData = z.infer<typeof scheduleJobDataSchema>;
 
@@ -130,14 +161,23 @@ export function jakartaDay(instant: string | Date): string {
 export const integrationItemSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  connected: z.literal(false),
-  mode: z.enum(['SIMULASI', 'BELUM_TERHUBUNG']),
+  connected: z.boolean(),
+  mode: z.enum(['SIMULASI', 'BELUM_TERHUBUNG', 'LIVE_TEREKONKSI', 'BELUM_LIVE']),
   note: z.string().min(1)
 });
 export const integrationStatusSchema = z.object({
-  mode: z.literal('SIMULASI'),
-  livePosting: z.literal(false),
+  mode: z.enum(['SIMULASI', 'SIAP_LIVE']),
+  livePosting: z.boolean(),
   integrations: z.array(integrationItemSchema)
+}).superRefine((value, ctx) => {
+  // Jujur: livePosting hanya boleh true bila Meta tampil terhubung.
+  const meta = value.integrations.find((item) => item.id === 'meta-threads');
+  if (value.livePosting && (!meta || !meta.connected)) {
+    ctx.addIssue({ code: 'custom', message: 'livePosting true but Meta Threads not connected' });
+  }
+  if (meta?.connected && !value.livePosting) {
+    ctx.addIssue({ code: 'custom', message: 'Meta connected but live posting is off' });
+  }
 });
 export type IntegrationStatus = z.infer<typeof integrationStatusSchema>;
 

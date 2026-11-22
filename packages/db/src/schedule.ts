@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { ContentFormat, EditorialSettings, ExecutionStatus, ScheduleStatus } from '@threads-id/contracts';
+import type { PublishQueueRow } from './threads.js';
 
 export class DailyLimitError extends Error {
   constructor(limit: number) { super(`Batas harian ${limit} post untuk hari Jakarta tersebut sudah tercapai`); }
@@ -243,6 +244,21 @@ export class ScheduleRepository {
       [randomUUID(), scheduleId, version, status, error ?? null]
     );
     return (result.rowCount ?? 0) > 0;
+  }
+
+  /**
+   * Phase 3: eksekusi jadwal yang masuk antrean publish Meta Threads.
+   * Tidak ada panggilan Meta di sini — worker hanya mencatat trigger dan status antrean.
+   * Status akhir (PUBLISHED/NEEDS_REVIEW/...) diperbarui saat antrean diproses.
+   */
+  async recordPublishedQueue(scheduleId: string, version: number, queue: PublishQueueRow): Promise<void> {
+    const existing = await this.pool.query('SELECT id FROM schedule_executions WHERE schedule_id = $1 AND version = $2', [scheduleId, version]);
+    if (existing.rowCount) return;
+    await this.pool.query(
+      `INSERT INTO schedule_executions (id, schedule_id, version, status, result)
+       VALUES ($1, $2, $3, 'DUPLICATE', $4::jsonb) ON CONFLICT (schedule_id, version) DO NOTHING`,
+      [randomUUID(), scheduleId, version, JSON.stringify({ queueId: queue.id, trigger: queue.trigger, simulated: false })]
+    );
   }
 
   async countSimulatedOkForDay(scheduledAt: Date): Promise<number> {

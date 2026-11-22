@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ExecutionStatus, ScheduleJobData } from '@threads-id/contracts';
-import type { ScheduleRepository } from '@threads-id/db';
+import type { PublishQueueRow, ScheduleRepository } from '@threads-id/db';
 
 /**
  * Adapter simulasi Phase 1: TIDAK ada panggilan ke Meta/Gemini.
@@ -8,6 +8,15 @@ import type { ScheduleRepository } from '@threads-id/db';
  */
 export type SimulationAdapter = {
   simulatePublication(draft: { id: string; text: string; format: string; themeName: string }): Promise<Record<string, unknown>>;
+};
+
+/**
+ * Adapter publikasi Phase 3: saat live posting aktif, eksekusi jadwal masuk antrean publish
+ * Meta Threads (bukan simulasi). Hasil akhir tetap dicatat di schedule_executions dengan
+ * status PUBLISHED/NEEDS_REVIEW/DUPLICATE/REQUIRES_LIVE.
+ */
+export type ThreadsPublishAdapter = {
+  enqueueFromSchedule(input: { draftId: string; scheduleId: string; text: string }): Promise<PublishQueueRow>;
 };
 
 export function createSimulationAdapter(): SimulationAdapter {
@@ -29,15 +38,21 @@ export function createSimulationAdapter(): SimulationAdapter {
   };
 }
 
-export type ProcessOutcome = ExecutionStatus | 'DEFERRED_PAUSED' | 'DUPLICATE' | 'MISSING';
+export type ProcessOutcome = ExecutionStatus | 'DEFERRED_PAUSED' | 'DUPLICATE' | 'MISSING' | 'SKIPPED_STALE' | 'SKIPPED_CANCELLED' | 'SKIPPED_LIMIT' | 'QUEUED';
 
 /**
  * Proses job jadwal dengan pengaman berlapis:
  * versi jadwal harus cocok, status harus SCHEDULED, draft tidak batal,
  * tidak pause global, dan batas harian Jakarta belum tercapai.
  * Klaim penyelesaian atomik (UPDATE bersyarat) membuat duplikat/konkuren aman.
+ * Bila publikasi live aktif, draft masuk antrean publish Meta; bukan simulasi.
  */
-export async function processScheduleJob(job: ScheduleJobData, repo: ScheduleRepository, adapter: SimulationAdapter): Promise<ProcessOutcome> {
+export async function processScheduleJob(
+  job: ScheduleJobData,
+  repo: ScheduleRepository,
+  adapter: SimulationAdapter,
+  options: { threads?: ThreadsPublishAdapter | undefined; livePosting?: boolean | undefined } = {}
+): Promise<ProcessOutcome> {
   const view = await repo.getForWorker(job.scheduleId);
   if (!view) return 'MISSING';
   if (view.entry.version !== job.version) {
@@ -54,6 +69,14 @@ export async function processScheduleJob(job: ScheduleJobData, repo: ScheduleRep
   if (usedToday >= view.settings.dailyPostLimit) {
     await repo.recordSkip(job.scheduleId, job.version, 'SKIPPED_LIMIT');
     return 'SKIPPED_LIMIT';
+  }
+  if (options.livePosting && options.threads) {
+    const queued = await options.threads.enqueueFromSchedule({
+      draftId: view.draft.id, scheduleId: job.scheduleId, text: view.draft.text
+    });
+    // Catat pemicu antrean; status akhir (PUBLISHED/NEEDS_REVIEW/...) dikerjakan worker publish.
+    await repo.recordPublishedQueue(job.scheduleId, job.version, queued);
+    return 'QUEUED';
   }
   const result = await adapter.simulatePublication(view.draft);
   return repo.completeSimulation(job.scheduleId, job.version, result);

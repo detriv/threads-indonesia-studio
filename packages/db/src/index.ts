@@ -6,6 +6,7 @@ export * from './generation.js';
 export * from './editorial.js';
 export * from './drafts.js';
 export * from './schedule.js';
+export * from './threads.js';
 
 const { Pool } = pg;
 export type { DemoResult } from '@threads-id/contracts';

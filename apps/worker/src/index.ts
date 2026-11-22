@@ -4,11 +4,13 @@ import { generateForProvider } from './generation-provider.js';
 import { GENERATION_JOB_NAME } from '@threads-id/contracts';
 import { GenerationRepository } from '@threads-id/db';
 import { PgBoss } from 'pg-boss';
-import { DEMO_JOB_NAME, demoJobDataSchema, SCHEDULE_JOB_NAME, scheduleJobDataSchema } from '@threads-id/contracts';
-import { ActionRepository, ScheduleRepository, createPool } from '@threads-id/db';
+import { readFileSync } from 'node:fs';
+import { DEMO_JOB_NAME, demoJobDataSchema, SCHEDULE_JOB_NAME, scheduleJobDataSchema, THREADS_JOB_NAME } from '@threads-id/contracts';
+import { ActionRepository, DraftRepository, ScheduleRepository, ThreadsRepository, createPool } from '@threads-id/db';
 import { processDemoAction } from './processor.js';
-import { createSimulationAdapter, processScheduleJob } from './schedule-processor.js';
+import { createSimulationAdapter, processScheduleJob, type ThreadsPublishAdapter } from './schedule-processor.js';
 import { dispatchOutbox } from './dispatcher.js';
+import { dispatchThreadsPublish, processThreadsPublish } from './threads-processor.js';
 
 if (process.env.DEMO_MODE !== 'true') throw new Error('Phase 1 hanya boleh berjalan dengan DEMO_MODE=true (simulasi, tanpa publikasi live)');
 const connectionString = process.env.DATABASE_URL;
@@ -17,6 +19,8 @@ const pool = createPool(connectionString);
 const repo = new ActionRepository(pool);
 const scheduleRepo = new ScheduleRepository(pool);
 const generationRepo = new GenerationRepository(pool);
+const threadsRepo = new ThreadsRepository(pool);
+const drafts = new DraftRepository(pool);
 const adapter = createSimulationAdapter();
 const boss = new PgBoss({ connectionString });
 await boss.start();
@@ -27,6 +31,50 @@ await boss.work<{requestId:string}>(GENERATION_JOB_NAME,{batchSize:1},async jobs
 });
 async function dispatchGenerations(){await dispatchGenerationRequests(generationRepo,boss);}
 await boss.createQueue(SCHEDULE_JOB_NAME);
+await boss.createQueue(THREADS_JOB_NAME);
+
+/** Token Meta dibaca dari file yang ditulis API saat OAuth (chmod 600), bukan dari DB. */
+function workerAccessToken(): string | undefined {
+  if (process.env.THREADS_ACCESS_TOKEN?.trim()) return process.env.THREADS_ACCESS_TOKEN.trim();
+  const file = process.env.THREADS_TOKEN_FILE ?? '/tmp/threads-token/token';
+  try {
+    return readFileSync(file, 'utf8').trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const threadsAdapter: ThreadsPublishAdapter = {
+  async enqueueFromSchedule({ draftId, scheduleId }) {
+    const live = threadsLive();
+    return threadsRepo.enqueue({ draftId, scheduleId, trigger: 'SCHEDULED', requestedBy: 'scheduler', liveEnabled: live });
+  }
+};
+
+function threadsLive(): boolean {
+  const envLive = process.env.THREADS_LIVE_POSTING === 'true';
+  const connection = (process.env.THREADS_CONNECTION_LIVE ?? '') === 'true';
+  return envLive || connection;
+}
+
+await boss.work(THREADS_JOB_NAME, { batchSize: 1 }, async (jobs) => {
+  for (const job of jobs) {
+    const { queueId } = job.data as { queueId: string };
+    const outcome = await processThreadsPublish(queueId, {
+      threads: threadsRepo,
+      token: workerAccessToken,
+      draftText: async (draftId) => {
+        const draft = await drafts.get(draftId);
+        return draft ? { id: draft.id, text: draft.text } : null;
+      },
+      onAmbiguous: () => {
+        // Biarkan job gagal → pg-boss retry dengan backoff; status tetap NEEDS_REVIEW.
+        throw new Error('Publikasi ambigu; menunggu rekonsiliasi operator');
+      }
+    });
+    if (outcome?.status === 'NEEDS_REVIEW') throw new Error('Publikasi ambigu; menunggu rekonsiliasi operator');
+  }
+});
 
 await boss.work(DEMO_JOB_NAME, async (jobs) => {
   for (const job of jobs) await processDemoAction(demoJobDataSchema.parse(job.data), repo);
@@ -34,7 +82,10 @@ await boss.work(DEMO_JOB_NAME, async (jobs) => {
 
 await boss.work(SCHEDULE_JOB_NAME, { batchSize: 1 }, async (jobs) => {
   for (const job of jobs) {
-    const outcome = await processScheduleJob(scheduleJobDataSchema.parse(job.data), scheduleRepo, adapter);
+    const outcome = await processScheduleJob(scheduleJobDataSchema.parse(job.data), scheduleRepo, adapter, {
+      threads: threadsAdapter,
+      livePosting: threadsLive()
+    });
     // Pause global: lempar error agar pg-boss meretry dengan backoff; tidak ada eksekusi tercatat.
     if (outcome === 'DEFERRED_PAUSED') throw new Error('Jadwal dipause global; menunda eksekusi');
   }
@@ -45,15 +96,16 @@ let dispatching = false;
 const dispatchTimer = setInterval(() => {
   if (dispatching) return;
   dispatching = true;
-  void Promise.all([dispatchOutbox(pool, boss),dispatchGenerations()])
+  void Promise.all([dispatchOutbox(pool, boss),dispatchGenerations(),dispatchThreadsPublish(threadsRepo,boss)])
     .catch((error) => console.error('Dispatcher outbox gagal:', error instanceof Error ? error.message : error))
     .finally(() => { dispatching = false; });
 }, 1000);
 dispatchTimer.unref();
 await dispatchOutbox(pool, boss);
 await dispatchGenerations();
+await dispatchThreadsPublish(threadsRepo, boss);
 
-console.log('Worker DEMO + jadwal simulasi siap.');
+console.log('Worker DEMO + jadwal simulasi + Threads publish siap.');
 await import('node:fs/promises').then(({ writeFile }) => writeFile('/tmp/worker-ready', 'ready\n'));
 
 const close = async () => { clearInterval(dispatchTimer); await boss.stop(); await pool.end(); };

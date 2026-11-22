@@ -5,7 +5,7 @@ import Fastify from 'fastify';
 import type { FastifyServerOptions } from 'fastify';
 import cookie from '@fastify/cookie';
 import { hashSessionToken } from '@threads-id/db';
-import type { DraftRepository, EditorialRepository, ScheduleRepository } from '@threads-id/db';
+import type { DraftRepository, EditorialRepository, ScheduleRepository, ThreadsRepository } from '@threads-id/db';
 import { DEMO_EDITORIAL_SAMPLE, DEMO_JOB_NAME } from '@threads-id/contracts';
 import type { DemoAction, DemoJobData } from '@threads-id/contracts';
 import { registerAuthRoutes, type AuthLike } from './auth-routes.js';
@@ -13,6 +13,7 @@ import { registerEditorialRoutes } from './editorial-routes.js';
 import { registerDraftRoutes } from './draft-routes.js';
 import { registerScheduleRoutes } from './schedule-routes.js';
 import { registerHistoryRoutes } from './history-routes.js';
+import { registerThreadsRoutes } from './threads-routes.js';
 import { createRateLimiter, type RateLimiter } from './rate-limit.js';
 
 type Repo = {
@@ -31,6 +32,7 @@ export type AppDeps = {
   generation?: GenerationRepository;
   drafts?: DraftRepository;
   schedule?: ScheduleRepository;
+  threads?: ThreadsRepository;
   sessionTtlMs?: number;
   cookieSecure?: boolean;
   rateLimiter?: RateLimiter;
@@ -61,6 +63,8 @@ export function buildApp(deps: AppDeps) {
     const route = request.routeOptions.url ?? '';
     if (!route.startsWith('/api/')) return;
     if (route === '/api/auth/login' || route === '/api/auth/session') return;
+    // Redirect OAuth Meta bersifat publik: code sekali pakai, ditukar server-side.
+    if (route === '/api/threads/oauth-callback' && request.method === 'GET') return;
     const token = request.cookies.sid;
     const session = token ? await deps.auth.findSession(hashSessionToken(token)) : null;
     if (!token || !session) return reply.code(401).send({ error: 'Autentikasi diperlukan' });
@@ -78,7 +82,8 @@ export function buildApp(deps: AppDeps) {
   if (deps.editorial) registerEditorialRoutes(app, deps.editorial);
   if (deps.editorial && deps.drafts) registerDraftRoutes(app, deps.drafts, deps.editorial);
   if (deps.schedule) registerScheduleRoutes(app, deps.schedule);
-  if (deps.schedule) registerHistoryRoutes(app, deps.schedule);
+  if (deps.schedule) registerHistoryRoutes(app, deps.schedule, { threads: deps.threads });
+  if (deps.threads) registerThreadsRoutes(app, deps.threads);
   app.post('/api/demo/actions', async (_request, reply) => {
     const actionId = randomUUID();
     await deps.repo.create(actionId);

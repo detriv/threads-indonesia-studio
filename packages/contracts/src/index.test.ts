@@ -51,9 +51,9 @@ describe('kontrak editorial Phase 1', () => {
   it('memisahkan siklus draft, status jadwal, dan status eksekusi', () => {
     expect(draftStatusSchema.options).toEqual(['DRAFT', 'IN_REVIEW', 'APPROVED', 'SCHEDULED', 'CANCELLED']);
     expect(scheduleStatusSchema.options).toEqual(['SCHEDULED', 'COMPLETED', 'CANCELLED']);
-    expect(executionStatusSchema.options).toEqual([
-      'SIMULATED_OK', 'SKIPPED_STALE', 'SKIPPED_CANCELLED', 'SKIPPED_PAUSED', 'SKIPPED_LIMIT', 'CANCELLED', 'FAILED'
-    ]);
+    // Phase 3 menambahkan PUBLISHED/NEEDS_REVIEW/DUPLICATE/REQUIRES_LIVE tanpa menghapus status Phase 1.
+    expect(executionStatusSchema.options).toContain('SIMULATED_OK');
+    expect(executionStatusSchema.options).toContain('PUBLISHED');
     expect(SCHEDULE_JOB_NAME).toBe('schedule.simulate-publication');
     expect(scheduleJobDataSchema.parse({ scheduleId: crypto.randomUUID(), version: 2 })).toMatchObject({ version: 2 });
     expect(() => scheduleJobDataSchema.parse({ scheduleId: crypto.randomUUID(), version: 0 })).toThrow();
@@ -74,16 +74,29 @@ describe('kontrak editorial Phase 1', () => {
     expect(jakartaDay(new Date('2026-11-21T00:30:00.000Z'))).toBe('2026-11-21');
   });
 
-  it('status integrasi Phase 1 wajib jujur: simulasi, tidak terhubung, tanpa posting live', () => {
+  it('status integrasi jujur: live mati default, publikasi Meta terpisah dari Gemini', () => {
+    // Phase 3: livePosting false + mode SIMULASI tetap valid; status koneksi Meta kini bisa jujur.
     const honest = {
-      mode: 'SIMULASI', livePosting: false,
+      mode: 'SIMULASI' as const, livePosting: false,
       integrations: [
-        { id: 'meta-threads', name: 'Meta Threads', connected: false, mode: 'SIMULASI', note: 'Phase 3' },
-        { id: 'gemini', name: 'Gemini', connected: false, mode: 'BELUM_TERHUBUNG', note: 'Phase 2' }
+        { id: 'meta-threads', name: 'Meta Threads', connected: false, mode: 'BELUM_LIVE' as const, note: 'Fase 3' },
+        { id: 'gemini', name: 'Gemini', connected: false, mode: 'BELUM_TERHUBUNG' as const, note: 'Fase 2' }
       ]
     };
     expect(integrationStatusSchema.parse(honest)).toMatchObject({ mode: 'SIMULASI', livePosting: false });
     expect(() => integrationStatusSchema.parse({ ...honest, livePosting: true })).toThrow();
     expect(() => integrationStatusSchema.parse({ ...honest, integrations: [{ ...honest.integrations[0], connected: true }] })).toThrow();
+    const live = {
+      mode: 'SIAP_LIVE' as const, livePosting: true,
+      integrations: [
+        { id: 'meta-threads', name: 'Meta Threads', connected: true, mode: 'LIVE_TEREKONKSI' as const, note: 'Aktif' },
+        { id: 'gemini', name: 'Gemini', connected: false, mode: 'BELUM_TERHUBUNG' as const, note: 'Fase 2' }
+      ]
+    };
+    expect(integrationStatusSchema.parse(live)).toMatchObject({ mode: 'SIAP_LIVE', livePosting: true });
+    // Konsistensi: livePosting=true wajib Meta connected=true.
+    expect(() => integrationStatusSchema.parse({ ...live, integrations: [{ ...live.integrations[0], connected: false }, live.integrations[1]] })).toThrow();
+    // Mode lama 'SIMULASI' untuk Meta masih valid selama live mati.
+    expect(integrationStatusSchema.parse({ ...honest, integrations: [{ ...honest.integrations[0], mode: 'SIMULASI' as const }, honest.integrations[1]] })).toMatchObject({ livePosting: false });
   });
 });
