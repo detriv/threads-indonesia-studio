@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { THREADS_JOB_NAME } from '@threads-id/contracts';
+import { threadsEnv } from '@threads-id/db';
 import type { PublishQueueRow, ThreadsRepository } from '@threads-id/db';
 import type { ThreadsTransport } from './threads-client.js';
 import { assertLiveAllowed, fetchPublishingLimit, inspectContainer, publishTextPost } from './threads-client.js';
@@ -42,16 +43,26 @@ export async function processThreadsPublish(queueId: string, deps: ThreadsPublis
     await deps.threads.markFailed(queueId, 'CONFIG', 'Koneksi Meta Threads belum diatur.');
     return deps.threads.getQueue(queueId);
   }
+  // DB (hasil OAuth) adalah sumber utama; env menjadi fallback bila operator mengisi manual.
+  const envFallback = threadsEnv();
+  const effective = {
+    ...connection,
+    appId: connection.appId ?? envFallback.appId,
+    userId: connection.userId ?? envFallback.userId,
+    accessTokenPresent: connection.accessTokenPresent || Boolean(envFallback.accessToken) || Boolean(deps.token?.())
+  };
   try {
-    assertLiveAllowed(connection);
+    assertLiveAllowed(effective);
   } catch (error) {
     const code = error instanceof Error ? error.message : 'CONFIG';
     await deps.threads.markFailed(queueId, code, code === 'NO_LIVE' ? 'Publikasi live belum diaktifkan operator.' : 'Kredensial/scope/token Meta Threads belum memadai.');
     return deps.threads.getQueue(queueId);
   }
   const credentials = {
-    appId: connection.appId!, appSecret: '', userId: connection.userId!,
-    accessToken: deps.token?.() ?? ''
+    appId: effective.appId!,
+    appSecret: '',
+    userId: effective.userId!,
+    accessToken: deps.token?.() ?? envFallback.accessToken
   };
   if (!credentials.appId || !credentials.userId || !credentials.accessToken) {
     await deps.threads.markFailed(queueId, 'CONFIG', 'THREADS_APP_ID/THREADS_USER_ID/THREADS_ACCESS_TOKEN belum lengkap di server.');

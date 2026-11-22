@@ -124,6 +124,35 @@ describe('worker publish Threads (PostgreSQL, transport dimock)', () => {
     expect(attempts.some((a) => a.outcome === 'AMBIGUOUS')).toBe(true);
   });
 
+  it('user_id/app_id dari env dipakai bila DB belum pernah OAuth', async () => {
+    const previous = { ...process.env };
+    process.env.THREADS_APP_ID = 'env-app';
+    process.env.THREADS_USER_ID = 'env-user';
+    try {
+      await threads.upsertConnection({ appId: undefined, appSecretPresent: true, userId: undefined, accessTokenPresent: false, status: 'CONNECTED', livePosting: true, scopes: 'threads_basic,threads_content_publish' });
+      const draft = await drafts.create({ themeId, format: 'OBSERVASI_PENDEK', text: 'Fallback env user id.' });
+      const queue = await threads.enqueue({ draftId: draft.id, trigger: 'MANUAL', requestedBy: 'admin', liveEnabled: true });
+      const result = await processThreadsPublish(queue.id, {
+        threads,
+        token: () => 'fixture-token',
+        draftText: async (id) => ({ id, text: draft.text }),
+        sleep: noSleep,
+        limit: async () => ({ quotaUsage: 0, quotaTotal: 250, remaining: 250 }),
+        transport: vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          if (url.endsWith('/threads')) return new Response(JSON.stringify({ id: 'container-env' }), { status: 200 });
+          if (url.includes('/threads_publish')) return new Response(JSON.stringify({ id: 'media-env' }), { status: 200 });
+          return new Response(JSON.stringify({ quota_usage: 0, config: { quota_total: 250 } }), { status: 200 });
+        }) as unknown as typeof fetch
+      });
+      expect(result).toMatchObject({ status: 'PUBLISHED', mediaId: 'media-env' });
+    } finally {
+      for (const key of ['THREADS_APP_ID', 'THREADS_USER_ID']) {
+        if (previous[key] === undefined) delete process.env[key]; else process.env[key] = previous[key];
+      }
+    }
+  });
+
   it('konkuren/restart: dua proses worker sama antrean hanya satu yang memanggil Meta', async () => {
     await threads.upsertConnection({ appId: 'app', appSecretPresent: true, userId: 'user', accessTokenPresent: true, status: 'CONNECTED', livePosting: true, scopes: 'threads_basic,threads_content_publish' });
     const draft = await drafts.create({ themeId, format: 'OBSERVASI_PENDEK', text: 'Konkuren mock.' });
