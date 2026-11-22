@@ -8,7 +8,7 @@ Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertah
 - **Post nyata**: `18033566909883283` (DgBw9cAEh37), `18114336386231777` (DgBxKWAkpxb), `17949796110358338` (DgBxqDnkjxK) — semua status `PUBLISHED`.
 - Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip.
 - Perbaikan saat live: ID kanonik dari `/me` (token-exchange berbeda), permalink asli, dedupe dispatcher.
-- Live masih ON; matikan lewat dashboard bila tidak dipakai. Next: review independen + keputusan COMPLETE.
+- Live **OFF** (`live_posting=false`); nyalakan lewat dashboard bila akan posting lagi. Next: lanjut Fase 4 atau push (repo belum punya remote).
 
 - Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.
 - Final gates aktual: `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0, **62unit/behavior+71integrasi PostgreSQL**,0gagal/skip,5workspace build/typecheckPASS,audit0. Tests transport adalah mock lokal, bukan Gemini nyata. RED/GREEN rinci ada di WORKLOG.

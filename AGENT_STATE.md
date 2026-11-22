@@ -9,7 +9,7 @@ Bagian ini status saat ini; histori checkpoint/provider di bawah dipertahankan. 
 - Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL**, 0 gagal/skip.
 - Idempotensi: klaim atomik antrean; ambigu → NEEDS_REVIEW; konkuren 2 proses → 1 panggilan container; dispatcher publish kini tidak mengirim job duplikat.
 - Keamanan: token Meta TIDAK masuk DB (presence + expiry); token file `0600` di worker; dashboard tidak pernah menampilkan token/secret.
-- Live masih **ON**; matikan lewat dashboard (Publikasi) bila tidak dipakai. Syarat Meta: akun Threads publik + invite tester di-Accept di Settings → Account → Website permissions.
+- Live **OFF** (`live_posting=false`); nyalakan lewat dashboard (Publikasi) bila akan posting lagi. Syarat Meta: akun Threads publik + invite tester di-Accept di Settings → Account → Website permissions.
 - Next exact action: Fase 3 selesai; pilihan berikutnya (matikan live & rapikan data / lanjut Fase 4 / push) menunggu keputusan operator. Jangan push tanpa persetujuan.
 
 - Fase aktif: **3 — Posting Threads / COMPLETE** (live terverifikasi + review independen operator lolos semua). Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING; Fase 4–6 dan Z NOT STARTED.
