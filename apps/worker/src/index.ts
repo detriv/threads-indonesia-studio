@@ -156,7 +156,9 @@ await boss.work(THREADS_REPLY_JOB_NAME, { batchSize: 1 }, async (jobs) => {
     const { queueId } = replyJobDataSchema.parse(job.data);
     await processThreadsReply(queueId, {
       replies: replyRepo, threads: threadsRepo,
-      live: async () => (await replyRepo.getSettings()).livePosting
+      live: async () => (await replyRepo.getSettings()).livePosting,
+      token: workerAccessToken,
+      persistToken: persistWorkerToken
     });
   }
 });
