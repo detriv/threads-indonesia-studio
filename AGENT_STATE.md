@@ -12,7 +12,7 @@ Bagian ini status saat ini; histori checkpoint/provider di bawah dipertahankan. 
 - Live masih **ON**; matikan lewat dashboard (Publikasi) bila tidak dipakai. Syarat Meta: akun Threads publik + invite tester di-Accept di Settings → Account → Website permissions.
 - Next exact action: review independen + keputusan COMPLETE; jangan push tanpa persetujuan.
 
-- Fase aktif: **3 — Posting Threads / IMPLEMENTED — LIVE VERIFICATION PENDING**. Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING; Fase 4–6 dan Z NOT STARTED.
+- Fase aktif: **3 — Posting Threads / LIVE VERIFIED (3 post nyata PUBLISHED)**. Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING; Fase 4–6 dan Z NOT STARTED.
 
 - Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.
 - Final gates aktual: `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0, **62unit/behavior+71integrasi PostgreSQL**,0gagal/skip,5workspace build/typecheckPASS,audit0. Tests transport adalah mock lokal, bukan Gemini nyata. RED/GREEN rinci ada di WORKLOG.
