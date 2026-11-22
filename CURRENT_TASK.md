@@ -1,6 +1,13 @@
 # CURRENT TASK
 
-## Checkpoint terbaru — Fase 3 Posting Threads: COMPLETE
+## Checkpoint terbaru — Fase 4A (discovery + skor + review): LIVE VERIFIED
+
+**Fase: 4A — LIVE VERIFIED.** Discovery RSS 5 sumber, skor relevansi, kandidat → draft `TREN_RELEVAN` → review; live posting tetap MATI. 4B (reply) belum dimulai. Fase 0/1/3 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING. Branch `main`.
+
+- Ditambahkan: migrasi `007_trend_discovery.sql`; `TrendRepository`; worker `trend-provider`/`trend-scoring`/`trend-processor`; API `/api/trends/*`; menu dashboard **Tren**.
+- Verifikasi nyata: 215 item, 115 baru, 5 draft kandidat `IN_REVIEW`, 0 kegagalan dari 5 sumber.
+- Gate: lint/typecheck 0; 89 unit + 101 integrasi PASS.
+- Next: 4B reply (scope `threads_manage_replies` + `threads_read_replies`, perlu re-OAuth).
 
 **Fase: 3 — Posting Threads. COMPLETE.** Live terverifikasi (3 post nyata terbit) + review independen dilaporkan operator **lolos semua** (2026-11-22). Fase 0/1/3 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING. Branch `main`, HEAD `83b4309`.
 

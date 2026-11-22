@@ -1,5 +1,14 @@
 # Changelog
 
+## Fase 4 — Tren, Reply, Discovery
+
+**4A = LIVE VERIFIED (2026-11-22)** — discovery + skor + review. 4B (reply) belum dimulai.
+
+- Ditambahkan: migrasi `007_trend_discovery.sql` (trend_settings, trend_items, trend_candidates, trend_runs); kontrak `trend.ts`; `TrendRepository`; worker `trend-provider` (RSS/Atom, tanpa dependensi), `trend-scoring` (skor 0–100 + alasan audit), `trend-processor` + dispatcher; API `/api/trends/*`; menu dashboard **Tren**.
+- Verifikasi nyata: 5 sumber RSS (detik, Kompas, CNN Indonesia, Antara, Republika) → 215 item, 115 baru, 5 draft `TREN_RELEVAN` berstatus `IN_REVIEW`, 0 kegagalan. Kegagalan sumber dicatat jujur (run pertama: CNN 404, Kumparan gagal, Tempo 403 → daftar bawaan dikoreksi).
+- Gate: lint/typecheck 0; **89 unit + 101 integrasi PostgreSQL PASS**.
+- Batas: discovery nonaktif/dijeda → tidak memproses; `daily_limit` ditegakkan; skor di bawah ambang tidak jadi draft; tidak ada kiriman otomatis ke Threads.
+
 ## Fase 3 — Posting Threads: COMPLETE
 
 - Ditambahkan: kontrak Meta Threads (job name, batas 500 char, wait 30s, scope `threads_basic`+`threads_content_publish`), migrasi `006_threads_publish.sql`, API `/api/threads/*` (status koneksi, OAuth URL, callback GET publik + POST, toggle live, antrean publish, rekonsiliasi), worker 2 langkah container→publish, UI halaman Publikasi.

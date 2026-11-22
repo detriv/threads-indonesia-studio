@@ -1,5 +1,17 @@
 # WORKLOG — Phase 0
 
+## Fase 4A — discovery tren + skor relevansi (LIVE VERIFIED)
+
+**Fase 4A = LIVE VERIFIED**, 4B (reply) belum dimulai. Discovery RSS publik + skor 0–100 dengan alasan audit + kandidat → draft `TREN_RELEVAN` (IN_REVIEW). Live posting tetap MATI; tidak ada kiriman otomatis.
+
+- Ditambahkan: migrasi `007_trend_discovery.sql` (`trend_settings`, `trend_items`, `trend_candidates`, `trend_runs`); `packages/contracts/src/trend.ts`; `packages/db/src/trend.ts`; worker `trend-provider.ts` (RSS/Atom, **tanpa dependensi baru**), `trend-scoring.ts`, `trend-processor.ts` (+dispatcher); API `trend-routes.ts` (`/api/trends/settings|items|candidates|refresh|runs/:id|candidates/:id/dismiss`); menu dashboard **Tren**.
+- Verifikasi nyata (stack 8080, run `a4e9ada2`): **5 sumber RSS, 215 item, 115 baru, 5 draft kandidat, 0 kegagalan**. Run pertama membuktikan pencatatan kegagalan jujur (CNN 404, Kumparan fetch gagal, Tempo 403) → daftar bawaan dikoreksi ke 5 URL yang terverifikasi HTTP 200.
+- Gate: lint/typecheck 0; **89 unit + 101 integrasi PostgreSQL PASS**, 0 gagal/skip; build 0.
+- Temuan/perbaikan saat implementasi: `truncateAll` harus memuat tabel tren (state tes bocor); CDATA RSS harus dibuang sebelum strip tag; `createCandidate` mengembalikan id agar `markConverted` pasti diterapkan; item tak bertema tidak jadi draft (`skippedNoTheme`).
+- Batas: discovery nonaktif/dijeda → tidak memproses apa pun; `daily_limit` per hari WIB ditegakkan; skor < ambang tidak jadi draft; kandidat unik per item (`trend_candidates_item_unique`).
+- Next: 4B reply — scope `threads_manage_replies` + `threads_read_replies`, worker 2 langkah, pause & kuota terpisah, live mati.
+
+
 ## Fase 3 — verifikasi LIVE Meta Threads (post nyata terbit)
 
 **Fase3 = COMPLETE** (live terverifikasi + review independen operator lolos semua, 2026-11-22). HEAD `83b4309`; branch `main`; stack utama 8080 diredeploy ke image baru; `.env` mode 0600; live **ON** (1 draft tersimpan).

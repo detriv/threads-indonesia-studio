@@ -57,7 +57,8 @@ const TABLES = [
   'generation_attempts', 'generation_requests',
   'schedule_executions', 'schedule_outbox', 'schedule_entries', 'drafts',
   'review_topics', 'personal_sources', 'voice_examples', 'theme_examples', 'themes',
-  'editorial_settings', 'admin_sessions', 'admin_users', 'demo_actions'
+  'editorial_settings', 'admin_sessions', 'admin_users', 'demo_actions',
+  'trend_candidates', 'trend_items', 'trend_runs', 'trend_settings'
 ];
 
 export async function truncateAll(pool: pg.Pool): Promise<void> {

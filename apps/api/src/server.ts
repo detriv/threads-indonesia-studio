@@ -1,6 +1,6 @@
 import { PgBoss } from 'pg-boss';
 import { DEMO_JOB_NAME } from '@threads-id/contracts';
-import { GenerationRepository, ActionRepository, AuthRepository, DraftRepository, EditorialRepository, ScheduleRepository, ThreadsRepository, createPool } from '@threads-id/db';
+import { GenerationRepository, ActionRepository, AuthRepository, DraftRepository, EditorialRepository, ScheduleRepository, ThreadsRepository, TrendRepository, createPool } from '@threads-id/db';
 import { migrate } from '@threads-id/db/migrate';
 import { buildApp } from './app.js';
 
@@ -37,6 +37,7 @@ const app = buildApp({
   generation: new GenerationRepository(pool),
   schedule: new ScheduleRepository(pool),
   threads: new ThreadsRepository(pool),
+  trends: new TrendRepository(pool),
   sessionTtlMs: Number(process.env.SESSION_TTL_HOURS ?? 12) * 3600_000,
   cookieSecure: process.env.COOKIE_SECURE === 'true'
 });
