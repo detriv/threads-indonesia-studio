@@ -1,5 +1,12 @@
 # Changelog
 
+## Fase 3 — Posting Threads (IMPLEMENTED / LIVE VERIFICATION PENDING, belum commit)
+
+- Ditambahkan: kontrak Meta Threads (job name, batas 500 char, wait 30s, scope `threads_basic`+`threads_content_publish`), migrasi `006_threads_publish.sql`, API `/api/threads/*` (status koneksi, OAuth URL, callback GET publik + POST, toggle live, antrean publish, rekonsiliasi), worker 2 langkah container→publish, UI halaman Publikasi.
+- Perilaku: live mati default → antrean `REQUIRES_LIVE` (tanpa post nyata); live aktif → `QUEUED` → `PUBLISHED` (media_id wajib) / `NEEDS_REVIEW` (ambigu after-send, rekonsiliasi operator) / `FAILED`.
+- Gate: lint/typecheck/build/audit/diff-check exit 0; **73 unit + 85 integrasi PostgreSQL PASS**, 0 gagal/skip.
+- Belum: kredensial Meta + post uji nyata. Tidak commit/push.
+
 ## Checkpoint terbaru — adaptasi teks prompt/chat (working tree, belum commit)
 
 Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase2 IN PROGRESS / IMPLEMENTED — LIVE VERIFICATION PENDING**, parent review adaptasi teks belum dilakukan. HEAD `61bf136`, runtime committed sebelumnya `6ea5314`; perubahan sekarang belum commit/push.

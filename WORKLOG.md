@@ -480,3 +480,49 @@ Parent kemudian mengonfirmasi readbackDB FAILED/PROVIDER,0draft/0schedule dan se
 - Runtime terbaru `98dcf15`: prompt API Gemini → jawaban teks biasa → draft; API Threads hanya publikasi pada Fase3, belum dimulai. Satu provider call per attempt; Coba tema tiga bagian teks tervalidasi dengan format dikelola aplikasi.
 - Parent full gates PASS:62unit+71integrasi PostgreSQL,0gagal/skip; lint/typecheck/build5workspace/audit0. Reviewer independen APPROVED dan39targeted provider tests PASS. Tidak ada outbound Gemini tambahan.
 - Simulasi/mock terverifikasi; uji live format baru PENDING. Hydrogen PROVIDER/timeout45s sebelumnya belum terdiagnosis/fixed. Main8080 belum diredeploy; tidak push. Review implementasi telah selesai; next exact action adalah uji live terbatas dengan persetujuan, bukan mengulang review yang sudah approved.
+
+## Fase 3 — Posting Threads (IMPLEMENTED / LIVE VERIFICATION PENDING)
+
+### Tujuan & batas
+
+Menghubungkan Meta Threads lewat OAuth resmi, posting manual dari dashboard, dan publikasi teks terjadwal — dengan live **mati secara default** dan bukti idempotensi penuh. Tidak ada klaim post nyata tanpa kredensial + izin eksplisit operator.
+
+### Berkas
+
+- Ditambahkan: `packages/contracts/src/threads.test.ts`; `packages/db/src/threads.ts`; `packages/db/migrations/006_threads_publish.sql`; `apps/api/src/threads-oauth.ts`; `apps/api/src/threads-routes.ts`; `apps/api/src/threads.integration.test.ts`; `apps/worker/src/threads-client.ts`; `apps/worker/src/threads-client.test.ts`; `apps/worker/src/threads-processor.ts`; `apps/worker/src/threads.integration.test.ts`.
+- Diubah: `packages/contracts/src/index.ts` (+job name, batas 500, wait 30s, scope, status publish/eksekusi gabungan, superRefine kejujuran live); `packages/contracts/src/index.test.ts`; `packages/db/src/index.ts`, `schedule.ts` (+`recordPublishedQueue`), `testing.ts`; `apps/api/src/app.ts`, `server.ts`, `history-routes.ts`, `history.integration.test.ts`; `apps/worker/src/index.ts`, `schedule-processor.ts`; `apps/web/src/App.tsx`; `compose.yaml`; `.env.example`.
+
+### Perintah & hasil (nyata)
+
+- `npm run lint` → exit 0.
+- `npm run typecheck` → exit 0 (5 workspace).
+- `npm run test:all` → exit 0; **73 unit** (11 file) + **85 integrasi PostgreSQL** (12 file), 0 gagal/skip.
+- `npm run build` → exit 0.
+- `npm audit --audit-level=moderate` → 0 vulnerabilities.
+- `git diff --check` → bersih.
+
+### Keputusan & alasannya
+
+- Live posting default `THREADS_LIVE_POSTING=false`. Saat mati, antrean publish tetap dicatat dengan status `REQUIRES_LIVE` (bukti audit), bukan post nyata — mematuhi spesifikasi "publikasi/reply live mati secara default".
+- Dua langkah Meta: `POST /{user}/threads` (container teks) → tunggu ~30 detik → `POST /{user}/threads_publish`. Batas teks 500 karakter ditegakkan DB (`guard_publish_text_limit`) sebelum panggilan API.
+- Ambigu after-send (timeout/network setelah container dibuat) → `NEEDS_REVIEW` + rekonsiliasi operator; **tidak ada kirim ulang buta**. `PUBLISHED` wajib `media_id` (trigger DB).
+- Idempotensi: klaim antrean atomik (`UPDATE ... WHERE status='QUEUED' RETURNING`), uji konkuren 2 proses → 1 panggilan container.
+- Token Meta **tidak** disimpan di DB; hanya presence + expiry. Token live ditulis file 0600 (`THREADS_TOKEN_FILE`) via volume `threads_token`, dibaca worker. Dashboard tidak pernah menampilkan token/secret.
+
+### RED → GREEN
+
+- RED: 3 kegagalan saat integrasi pertama (callback POST butuh CSRF; outcome jadwal `QUEUED` bukan `DUPLICATE`; assertion OAuth callback) + 1 test lama `executionStatusSchema.options` yang terlalu kaku.
+- GREEN: semua diperbaiki; `npm run test:all` exit 0 (73+85). Perbaikan: callback GET publik khusus redirect Meta, `recordPublishedQueue` menulis penanda antrean, test kontrak memakai `toContain` untuk status gabungan.
+
+### Batas bukti (jujur)
+
+- Semua uji Meta memakai **transport mock lokal**. Tidak ada panggilan ke `graph.threads.net`.
+- Belum ada kredensial Meta lokal; belum ada post uji terbit. Kriteria Fase 3 "satu post uji terbit di akun yang diizinkan" **PENDING**.
+- QA runtime stack terisolasi (login admin + alur Publikasi live-mati) **belum dijalankan** pada checkpoint ini.
+- Stack utama 8080 masih image lama; tidak diredeploy.
+
+### Next exact action
+
+1. Commit fokus Fase 3 (kode) + commit dokumen terpisah.
+2. QA runtime stack terisolasi: login admin → halaman Publikasi → live MATI → antrean `REQUIRES_LIVE`, tanpa post nyata.
+3. Live post uji hanya setelah operator memberikan `THREADS_APP_ID/SECRET` + akun uji + izin eksplisit. Jangan tandai Fase 3 COMPLETE sebelum itu.

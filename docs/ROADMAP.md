@@ -1,6 +1,6 @@
 # Roadmap
 
-Status kini: Fase 1 COMPLETE, Fase 2 **IN PROGRESS** (adaptasi prompt/chat → teks draft/caption menunggu review parent; live Gemini belum berhasil, bukan klaim root cause Hydrogen diperbaiki); Fase 3–6 belum dimulai. Lihat [konfigurasi dan bukti Fase 2](PHASE2.md).
+Status kini: Fase 0/1 COMPLETE; Fase 2 **IMPLEMENTED / LIVE VERIFICATION PENDING** (live Gemini belum berhasil); Fase 3 **IMPLEMENTED / LIVE VERIFICATION PENDING** (kode + UI + idempotensi selesai, belum ada kredensial Meta / post uji nyata); Fase 4–6 dan Z belum dimulai. Lihat [konfigurasi dan bukti Fase 2](PHASE2.md) dan state file.
 
 | Fase | Hasil | Kriteria utama |
 |---|---|---|
@@ -11,5 +11,6 @@ Status kini: Fase 1 COMPLETE, Fase 2 **IN PROGRESS** (adaptasi prompt/chat → t
 | 4 — Tren, reply, discovery | Sumber resmi, skor relevansi, review dan reply | Tren relevan dengan bukti sumber; slot bisa diisi konten reguler; tanpa reply ganda; pause terpisah |
 | 5 — Gambar | Ilustrasi opsional, preview, alt text, URL media | Batas dipatuhi sebelum panggilan API; kegagalan media terlihat dan dapat ditangani |
 | 6 — Siap operasional | Backup/restore, pemulihan token, pantauan, deploy | Restore dan kegagalan diuji; hasil simulasi dibedakan dari hasil akun sungguhan |
+| Z — Multi API Key Rotasi (extendable) | Rotasi otomatis key Gemini saat timeout/rate-limit + health check | Hanya setelah Fase 2 live PASS dan persetujuan operator; auto-rotate/revalidate, health check, bukti uji, docs |
 
 Fokus: Pertemanan dan chat, Kerja dan kuliah, Kebiasaan digital sebagai tema utama; Uang dan jajan sebagai selingan. Bahasa Indonesia santai dan humor observasional. Target awal 70% observasi pendek, 20% bahasan lebih dalam, 10% tren relevan. Pengalaman pribadi berasal dari catatan pemilik saja. Publikasi/reply live mati secara default dan tak boleh diaktifkan tanpa izin eksplisit.

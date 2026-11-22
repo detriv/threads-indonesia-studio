@@ -1,8 +1,13 @@
 # PHASE STATE
 
-## Checkpoint terbaru — adaptasi teks prompt/chat (working tree, belum commit)
+## Checkpoint terbaru — Fase 3 Posting Threads (working tree, belum commit)
 
-Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase2 IN PROGRESS / IMPLEMENTED — LIVE VERIFICATION PENDING**, parent review adaptasi teks belum dilakukan. HEAD `61bf136`, runtime committed sebelumnya `6ea5314`; perubahan sekarang belum commit/push.
+Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase 3 = IMPLEMENTED / LIVE VERIFICATION PENDING**, bukan COMPLETE. HEAD `fefb8dc`; Fase 2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING. Perubahan Fase 3 belum commit/push.
+
+- Meta OAuth (authorize + code→long-lived 60 hari), antrean publish manual & terjadwal, worker 2 langkah (container→publish), status PUBLISHED/NEEDS_REVIEW/DUPLICATE/REQUIRES_LIVE, UI halaman Publikasi, gate live default mati.
+- Final gates: lint/typecheck/test:all/build/audit/diff-check exit 0; **73 unit + 85 integrasi PostgreSQL**, 0 gagal/skip. Transport Meta = mock lokal.
+- Idempotensi & keamanan: klaim atomik antrean; ambigu after-send → NEEDS_REVIEW (tanpa kirim ulang buta); token Meta tidak masuk DB (presence + expiry saja, file 0600).
+- Belum ada kredensial Meta & post uji nyata. Next exact action: commit fokus Fase 3 + commit dokumen; QA runtime live-mati; live post uji hanya dengan izin eksplisit.
 
 - Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.
 - Final gates aktual: `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0, **62unit/behavior+71integrasi PostgreSQL**,0gagal/skip,5workspace build/typecheckPASS,audit0. Tests transport adalah mock lokal, bukan Gemini nyata. RED/GREEN rinci ada di WORKLOG.
@@ -16,7 +21,9 @@ Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertah
 | Phase 0 — fondasi + simulasi | COMPLETE | lint, typecheck, 4 tests, build, audit, Docker E2E, browser UI, editorial payload, restart persistence passed |
 | Phase 1 — Dashboard editorial | COMPLETE | `7bea826`; 17 unit + 52 integrasi, lint/typecheck/build/audit, Docker smoke/restart, QA browser fixture, review independen PASS; QA manual pengguna PASS (login dan dialog native) |
 | Fase 2 — Konten Gemini | IMPLEMENTED / LIVE VERIFICATION PENDING | 35 unit + 69 integrasi PostgreSQL PASS; lint/typecheck/build 5 workspace/audit 0, Docker smoke/restart terisolasi PASS; browser fixture generate/revise/failure/fallback PASS. Runtime `6ea5314`; review parent dan independen approved. Live Gemini PENDING (key/izin belum tersedia). |
-| Fase 3–6 | NOT STARTED | Tidak diizinkan pada sesi ini. Lihat `docs/ROADMAP.md` |
+| Fase 3 — Posting Threads | IMPLEMENTED / LIVE VERIFICATION PENDING | Kontrak + migrasi `006_threads_publish.sql` + API `/api/threads/*` + worker 2 langkah + UI Publikasi; 73 unit + 85 integrasi PASS; live default mati; post uji nyata PENDING |
+| Fase 4–6 | NOT STARTED | Lihat `docs/ROADMAP.md` |
+| Fase Z — Multi API Key Rotasi | NOT STARTED (extendable) | Hanya setelah Fase 2 live PASS + persetujuan operator |
 
 ## Fase 2 — reviewer blockers follow-up
 
