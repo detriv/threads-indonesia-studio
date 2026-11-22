@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { PublishStatus, ThreadsConnectionStatus, ThreadsPublishTrigger } from '@threads-id/contracts';
+import { THREADS_SCOPES } from '@threads-id/contracts';
 
 export class ThreadsConfigError extends Error {}
 export class ThreadsLiveDisabledError extends Error {
@@ -42,7 +43,8 @@ export function threadsEnv(): {
   appId: string; appSecret: string; userId: string; accessToken: string;
   livePosting: boolean; scopes: string[];
 } {
-  const rawScopes = (process.env.THREADS_SCOPES ?? 'threads_basic,threads_content_publish')
+  // Default mengikuti kontrak (termasuk scope balasan Fase 4B), bukan daftar hardcode.
+  const rawScopes = (process.env.THREADS_SCOPES ?? THREADS_SCOPES.join(','))
     .split(',').map((s) => s.trim()).filter(Boolean);
   return {
     appId: (process.env.THREADS_APP_ID ?? '').trim(),

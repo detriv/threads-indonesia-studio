@@ -6,6 +6,8 @@ Bertahap: **4A** discovery + skor + review dulu, **4B** reply kemudian.
 
 **Status: 4B = IMPLEMENTED / LIVE VERIFICATION PENDING (2026-11-22).** Antrean balasan + worker 2 langkah (`reply_to_id`) + API `/api/threads/replies/*` + panel Balasan di halaman Publikasi. Verifikasi runtime: enqueue → worker → `REQUIRES_LIVE` (live balasan MATI), tanpa balasan nyata; UI terverifikasi di DOM. Gate: 89 unit + 113 integrasi PASS. **Belum ada balasan nyata**: token saat ini belum punya `threads_manage_replies` → perlu re-OAuth + live balasan diaktifkan operator.
 
+**Status: 4C = LIVE VERIFIED (2026-11-22) — kotak masuk balasan.** Tarik balasan dari postingan kita (`/me/threads` → `/{post-id}/replies`), simpan sebagai kandidat, setujui untuk memesan balasan. Runtime: 20 post dipindai, 0 balasan, 0 kegagalan; API + menu **Masuk** terverifikasi. Auto-draft AI tersambung ke adapter Gemini (aktif bila `GEMINI_ALLOW_OUTBOUND=true`); selama belum diizinkan, draft dibiarkan kosong dan operator menulis manual. Live balasan tetap MATI. Gate: 89 unit + 122 integrasi PASS.
+
 Keputusan operator (2026-11-22):
 - Sumber: RSS portal berita Indonesia (detik, Kompas, CNN Indonesia, Antara, Republika). Threads app trends dipakai bila ada API resmi.
 - Alur: skor ≥ ambang → otomatis jadi draft `TREN_RELEVAN` → **tetap lewat review** (tidak pernah terkirim otomatis).

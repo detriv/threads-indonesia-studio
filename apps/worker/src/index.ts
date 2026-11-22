@@ -5,14 +5,16 @@ import { GENERATION_JOB_NAME } from '@threads-id/contracts';
 import { GenerationRepository } from '@threads-id/db';
 import { PgBoss } from 'pg-boss';
 import { readFileSync } from 'node:fs';
-import { DEMO_JOB_NAME, demoJobDataSchema, SCHEDULE_JOB_NAME, scheduleJobDataSchema, THREADS_JOB_NAME, THREADS_REPLY_JOB_NAME, TREND_JOB_NAME, trendJobDataSchema, replyJobDataSchema } from '@threads-id/contracts';
+import { DEMO_JOB_NAME, demoJobDataSchema, SCHEDULE_JOB_NAME, scheduleJobDataSchema, THREADS_JOB_NAME, THREADS_REPLY_JOB_NAME, TREND_JOB_NAME, trendJobDataSchema, replyJobDataSchema, REPLY_INBOX_JOB_NAME, replyInboxRunSchema } from '@threads-id/contracts';
 import { ActionRepository, DraftRepository, EditorialRepository, ReplyRepository, ScheduleRepository, ThreadsRepository, TrendRepository, createPool } from '@threads-id/db';
 import { processDemoAction } from './processor.js';
 import { createSimulationAdapter, processScheduleJob, type ThreadsPublishAdapter } from './schedule-processor.js';
 import { dispatchOutbox } from './dispatcher.js';
 import { dispatchThreadsPublish, processThreadsPublish } from './threads-processor.js';
 import { dispatchThreadsReplies, processThreadsReply } from './reply-processor.js';
+import { dispatchReplyInbox, processReplyInbox } from './reply-inbox.js';
 import { processTrendDiscovery, dispatchTrendRuns } from './trend-processor.js';
+import { generationConfig } from '@threads-id/db';
 
 if (process.env.DEMO_MODE !== 'true') throw new Error('Phase 1 hanya boleh berjalan dengan DEMO_MODE=true (simulasi, tanpa publikasi live)');
 const connectionString = process.env.DATABASE_URL;
@@ -53,6 +55,7 @@ await withRetry('createQueue', async () => {
   await boss.createQueue(THREADS_JOB_NAME);
   await boss.createQueue(TREND_JOB_NAME);
   await boss.createQueue(THREADS_REPLY_JOB_NAME);
+  await boss.createQueue(REPLY_INBOX_JOB_NAME);
 });
 await boss.work<{requestId:string}>(GENERATION_JOB_NAME,{batchSize:1},async jobs=>{
  for(const job of jobs)await processGeneration(job.data.requestId,generationRepo,(input,context,model,provider)=>generateForProvider(input,context,model,provider,{allowed:process.env.GEMINI_ALLOW_OUTBOUND==='true',key:process.env.GEMINI_API_KEY}));
@@ -111,6 +114,43 @@ await boss.work(THREADS_JOB_NAME, { batchSize: 1 }, async (jobs) => {
   }
 });
 
+await boss.work(REPLY_INBOX_JOB_NAME, { batchSize: 1 }, async (jobs) => {
+  for (const job of jobs) {
+    const { runId } = replyInboxRunSchema.parse(job.data);
+    try {
+      const result = await processReplyInbox({ runId }, {
+        replies: replyRepo, threads: threadsRepo, editorial, token: workerAccessToken,
+        // Auto-draft AI (opsional): hanya jalan bila Gemini outbound diizinkan operator.
+        draft: async ({ username, text }) => {
+          if (process.env.GEMINI_ALLOW_OUTBOUND !== 'true' || !process.env.GEMINI_API_KEY) return null;
+          try {
+            const themes = await editorial.listThemes();
+            const theme = themes[0];
+            if (!theme) return null;
+            const model = generationConfig('SHORT').model;
+            const generated = await generateForProvider(
+              {
+                purpose: 'SHORT', themeId: theme.id, format: 'OBSERVASI_PENDEK',
+                instruction: `Balas komentar @${username ?? 'pengguna'}: "${text}". Balas singkat, santai, dan tetap pada topik.`,
+                evidence: null, personalSourceId: null, draftId: null, expectedVersion: null
+              },
+              { theme: { name: theme.name, examples: theme.examples }, voices: [], ownerNote: null, original: { text, format: 'OBSERVASI_PENDEK' } },
+              model, 'GEMINI', { allowed: true, key: process.env.GEMINI_API_KEY }
+            );
+            return generated.output.drafts[0]?.text ?? null;
+          } catch {
+            return null; // gagal draft tidak menghalangi operator menulis manual
+          }
+        }
+      });
+      await replyRepo.completeInboxRun(runId, result);
+    } catch (cause) {
+      await replyRepo.failInboxRun(runId, cause instanceof Error ? cause.message : String(cause));
+      throw cause;
+    }
+  }
+});
+
 await boss.work(THREADS_REPLY_JOB_NAME, { batchSize: 1 }, async (jobs) => {
   for (const job of jobs) {
     const { queueId } = replyJobDataSchema.parse(job.data);
@@ -154,7 +194,7 @@ let dispatching = false;
 const dispatchTimer = setInterval(() => {
   if (dispatching) return;
   dispatching = true;
-  void Promise.all([dispatchOutbox(pool, boss),dispatchGenerations(),dispatchThreadsPublish(threadsRepo,boss,pool),dispatchTrendRuns(trendRepo,boss,pool),dispatchThreadsReplies(replyRepo,boss,pool)])
+  void Promise.all([dispatchOutbox(pool, boss),dispatchGenerations(),dispatchThreadsPublish(threadsRepo,boss,pool),dispatchTrendRuns(trendRepo,boss,pool),dispatchThreadsReplies(replyRepo,boss,pool),dispatchReplyInbox(replyRepo,boss,pool)])
     .catch((error) => console.error('Dispatcher outbox gagal:', error instanceof Error ? error.message : error))
     .finally(() => { dispatching = false; });
 }, 1000);
@@ -166,6 +206,7 @@ await withRetry('dispatcher awal', async () => {
   await dispatchThreadsPublish(threadsRepo, boss, pool);
   await dispatchTrendRuns(trendRepo, boss, pool);
   await dispatchThreadsReplies(replyRepo, boss, pool);
+  await dispatchReplyInbox(replyRepo, boss, pool);
 }, 5, 1000);
 
 console.log('Worker DEMO + jadwal simulasi + Threads publish siap.');

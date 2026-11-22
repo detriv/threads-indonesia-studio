@@ -1,6 +1,13 @@
 # CURRENT TASK
 
-## Checkpoint terbaru — Fase 4B (reply Threads): IMPLEMENTED / LIVE VERIFICATION PENDING
+## Checkpoint terbaru — Fase 4C (kotak masuk balasan): LIVE VERIFIED
+
+**Fase: 4C — LIVE VERIFIED.** Tarik balasan dari postingan kita → kandidat → setujui → pesan balasan. Runtime: 20 post dipindai, 0 balasan, 0 kegagalan; API `/api/threads/inbox/*` + menu **Masuk** terverifikasi. 4B = IMPLEMENTED (live balasan MATI; balasan nyata perlu re-OAuth + izin live). 4A LIVE VERIFIED; Fase 0/1/3 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING.
+
+- Ditambahkan: migrasi `009_reply_inbox.sql`; kontrak inbox; `ReplyRepository` (inbox + run outbox); worker `reply-inbox.ts` + dispatcher; API `/api/threads/inbox/*`; menu **Masuk**; auto-draft AI opsional (Gemini, hanya bila outbound diizinkan).
+- Gate: lint/typecheck/build 0; 89 unit + 122 integrasi PASS.
+- Batas: balasan milik kita sendiri dilewati; unik per `reply_media_id`; kirim balasan tetap butuh live balasan ON + persetujuan operator.
+- Next: balasan nyata 1× (setelah re-OAuth & live balasan ON), atau lanjut Fase 5.
 
 **Fase: 4B — IMPLEMENTED.** Antrean balasan, worker 2 langkah (`reply_to_id`), API `/api/threads/replies/*`, panel Balasan di Publikasi; **live balasan MATI** (runtime: enqueue → `REQUIRES_LIVE`). Balasan nyata BELUM ada: token belum punya `threads_manage_replies` → perlu re-OAuth + live balasan diaktifkan operator. Fase 4A LIVE VERIFIED; Fase 0/1/3 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING.
 

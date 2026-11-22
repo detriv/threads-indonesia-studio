@@ -136,4 +136,58 @@ export class ReplyRepository {
     );
     return Number(result.rows[0]?.n ?? 0);
   }
+
+  // --- Kotak masuk balasan (4C) ---
+  async insertInbox(row: { id: string; replyMediaId: string; rootPostId: string | null; username: string | null; text: string }): Promise<boolean> {
+    const result = await this.pool.query(
+      `INSERT INTO reply_inbox (id, reply_media_id, root_post_id, username, text)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (reply_media_id) DO NOTHING`,
+      [row.id, row.replyMediaId, row.rootPostId, row.username, row.text]
+    );
+    return (result.rowCount ?? 0) === 1;
+  }
+
+  async listInbox(limit = 50): Promise<Array<{ id: string; replyMediaId: string; rootPostId: string | null; username: string | null; text: string; draftText: string | null; status: string; createdAt: string; updatedAt: string }>> {
+    const result = await this.pool.query(
+      'SELECT id, reply_media_id, root_post_id, username, text, draft_text, status, created_at, updated_at FROM reply_inbox ORDER BY created_at DESC LIMIT $1',
+      [limit]
+    );
+    return result.rows.map((row) => ({
+      id: row.id, replyMediaId: row.reply_media_id, rootPostId: row.root_post_id, username: row.username,
+      text: row.text, draftText: row.draft_text, status: row.status,
+      createdAt: row.created_at.toISOString(), updatedAt: row.updated_at.toISOString()
+    }));
+  }
+
+  async setInboxDraft(id: string, draft: string): Promise<void> {
+    await this.pool.query("UPDATE reply_inbox SET draft_text = $2, updated_at = now() WHERE id = $1 AND status = 'PENDING'", [id, draft]);
+  }
+
+  async markInboxApproved(id: string): Promise<void> {
+    await this.pool.query("UPDATE reply_inbox SET status = 'APPROVED', updated_at = now() WHERE id = $1 AND status = 'PENDING'", [id]);
+  }
+
+  async dismissInbox(id: string): Promise<void> {
+    await this.pool.query("UPDATE reply_inbox SET status = 'DISMISSED', updated_at = now() WHERE id = $1 AND status = 'PENDING'", [id]);
+  }
+
+  async createInboxRun(id: string): Promise<void> {
+    await this.pool.query('INSERT INTO reply_runs (id) VALUES ($1) ON CONFLICT (id) DO NOTHING', [id]);
+  }
+  async pendingInboxRuns(limit = 20): Promise<string[]> {
+    const result = await this.pool.query<{ id: string }>("SELECT id FROM reply_runs WHERE status = 'QUEUED' ORDER BY created_at LIMIT $1", [limit]);
+    return result.rows.map((row) => row.id);
+  }
+  async completeInboxRun(id: string, result: unknown): Promise<void> {
+    await this.pool.query("UPDATE reply_runs SET status = 'DONE', result = $2::jsonb, updated_at = now() WHERE id = $1", [id, JSON.stringify(result)]);
+  }
+  async failInboxRun(id: string, error: string): Promise<void> {
+    await this.pool.query("UPDATE reply_runs SET status = 'FAILED', result = $2::jsonb, updated_at = now() WHERE id = $1", [id, JSON.stringify({ error })]);
+  }
+  async getInboxRun(id: string): Promise<{ id: string; status: string; result: unknown; createdAt: string; updatedAt: string } | null> {
+    const result = await this.pool.query('SELECT id, status, result, created_at, updated_at FROM reply_runs WHERE id = $1', [id]);
+    const row = result.rows[0];
+    return row ? { id: row.id, status: row.status, result: row.result, createdAt: row.created_at.toISOString(), updatedAt: row.updated_at.toISOString() } : null;
+  }
 }

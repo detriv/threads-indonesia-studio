@@ -81,3 +81,47 @@ describe('API balasan Threads Fase 4B (PostgreSQL)', () => {
     expect((await app.inject({ method: 'GET', url: `/api/threads/replies/${id}`, headers: { cookie } })).statusCode).toBe(200);
   });
 });
+
+describe('API kotak masuk balasan Fase 4C (PostgreSQL)', () => {
+  it('rute inbox menolak akses tanpa sesi', async () => {
+    const app = makeApp();
+    for (const [method, url] of [['GET', '/api/threads/inbox'], ['POST', '/api/threads/inbox/refresh'], ['POST', '/api/threads/inbox/x/dismiss']] as const) {
+      expect((await app.inject({ method, url })).statusCode).toBe(401);
+    }
+  });
+
+  it('refresh mencatat run QUEUED', async () => {
+    const app = makeApp();
+    const created = await app.inject({ method: 'POST', url: '/api/threads/inbox/refresh', headers: { cookie, 'x-csrf-token': csrf }, payload: {} });
+    expect(created.statusCode).toBe(202);
+    const run = await app.inject({ method: 'GET', url: `/api/threads/inbox/runs/${created.json().runId}`, headers: { cookie } });
+    expect(run.json().status).toBe('QUEUED');
+  });
+
+  it('approve: draft dipakai bila teks tidak dikirim, lalu masuk reply_queue', async () => {
+    const app = makeApp();
+    const itemId = 'aaaaaaaa-1111-4111-8111-111111111111';
+    await replies.insertInbox({ id: itemId, replyMediaId: 'm-1', rootPostId: 'p1', username: 'budi', text: 'kapan lanjut?' });
+    await replies.setInboxDraft(itemId, 'Sip, segera lanjut.');
+    const approved = await app.inject({ method: 'POST', url: `/api/threads/inbox/${itemId}/approve`, headers: { cookie, 'x-csrf-token': csrf }, payload: {} });
+    expect(approved.statusCode).toBe(200);
+    expect(approved.json().liveEnabled).toBe(false);
+    expect((await replies.listInbox())[0]!.status).toBe('APPROVED');
+    expect((await replies.list())[0]!.replyToId).toBe('m-1');
+  });
+
+  it('approve menolak teks kosong', async () => {
+    const app = makeApp();
+    await replies.insertInbox({ id: 'bbbbbbbb-2222-4222-8222-222222222222', replyMediaId: 'm-2', rootPostId: 'p1', username: 'ani', text: 'hai' });
+    const response = await app.inject({ method: 'POST', url: '/api/threads/inbox/bbbbbbbb-2222-4222-8222-222222222222/approve', headers: { cookie, 'x-csrf-token': csrf }, payload: {} });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('dismiss menandai DISMISSED', async () => {
+    const app = makeApp();
+    await replies.insertInbox({ id: 'cccccccc-3333-4333-8333-333333333333', replyMediaId: 'm-3', rootPostId: 'p1', username: 'citra', text: 'spam' });
+    const response = await app.inject({ method: 'POST', url: '/api/threads/inbox/cccccccc-3333-4333-8333-333333333333/dismiss', headers: { cookie, 'x-csrf-token': csrf }, payload: {} });
+    expect(response.statusCode).toBe(200);
+    expect((await replies.listInbox())[0]!.status).toBe('DISMISSED');
+  });
+});

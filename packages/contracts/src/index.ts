@@ -220,6 +220,23 @@ export type ReplySettings = z.infer<typeof replySettingsSchema>;
 export const replyJobDataSchema = z.object({ queueId: z.uuid() });
 export type ReplyJobData = z.infer<typeof replyJobDataSchema>;
 
+// ===== Phase 4C: kotak masuk balasan =====
+export const REPLY_INBOX_JOB_NAME = 'threads.reply-inbox' as const;
+export const replyInboxRunSchema = z.object({ runId: z.uuid() });
+export type ReplyInboxRun = z.infer<typeof replyInboxRunSchema>;
+export const inboxItemSchema = z.object({
+  id: z.string(),
+  replyMediaId: z.string().min(1),
+  rootPostId: z.string().nullable(),
+  username: z.string().nullable(),
+  text: z.string().min(1),
+  draftText: z.string().nullable(),
+  status: z.enum(['PENDING', 'APPROVED', 'DISMISSED']),
+  createdAt: z.string(),
+  updatedAt: z.string()
+});
+export type InboxItem = z.infer<typeof inboxItemSchema>;
+
 /** Status integrasi Phase 1 yang jujur: tidak ada koneksi Meta/Gemini dan tidak ada posting live. */
 export const PHASE1_INTEGRATION_STATUS: IntegrationStatus = {
   mode: 'SIMULASI',

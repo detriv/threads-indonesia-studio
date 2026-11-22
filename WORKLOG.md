@@ -1,5 +1,16 @@
 # WORKLOG — Phase 0
 
+## Fase 4C — kotak masuk balasan (reply inbox)
+
+**Fase 4C = LIVE VERIFIED**, 4B = IMPLEMENTED (live balasan MATI). Tarik balasan orang dari postingan kita → kandidat → operator setujui → pesan balasan.
+
+- Ditambahkan: migrasi `009_reply_inbox.sql` (`reply_inbox`, `reply_runs`); kontrak inbox (`REPLY_INBOX_JOB_NAME`, `InboxItem`); `ReplyRepository` (inbox + run outbox); worker `reply-inbox.ts` (`/me/threads` → `/{post-id}/replies`) + dispatcher; API `/api/threads/inbox/{inbox,refresh,runs/:id,:id/approve,:id/dismiss}`; menu dashboard **Masuk**; auto-draft AI opsional lewat adapter Gemini.
+- Verifikasi runtime: 20 post dipindai, 0 balasan, 0 kegagalan; anti-duplikat per `reply_media_id`; balasan milik kita sendiri dilewati.
+- Gate: lint/typecheck/build 0; **89 unit + 122 integrasi PostgreSQL PASS**, 0 gagal/skip.
+- Batas: kirim balasan baru lewat persetujuan operator DAN live balasan ON; auto-draft hanya bila `GEMINI_ALLOW_OUTBOUND=true` (selama belum, draft kosong & operator menulis manual).
+- Perbaikan: default `THREADS_SCOPES` di `threadsEnv()` sekarang mengikuti kontrak (4 scope) + `.env`/`.env.example` diperbarui; worker inbox kini menerima `workerAccessToken`.
+
+
 ## Fase 4B — balasan Threads (reply)
 
 **Fase 4B = IMPLEMENTED / LIVE VERIFICATION PENDING.** Antrean balasan terpisah dari post, live & jeda & kuota sendiri. **Belum ada balasan nyata**: token lama belum punya `threads_manage_replies`.

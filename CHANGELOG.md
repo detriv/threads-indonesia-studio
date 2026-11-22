@@ -2,7 +2,7 @@
 
 ## Fase 4 — Tren, Reply, Discovery
 
-**4A = LIVE VERIFIED (2026-11-22)** — discovery + skor + review. **4B = IMPLEMENTED / LIVE VERIFICATION PENDING (2026-11-22)** — antrean balasan, worker 2 langkah, API & panel Balasan; live balasan MATI (runtime: `REQUIRES_LIVE`), balasan nyata belum ada (perlu re-OAuth scope `threads_manage_replies` + izin live).
+**4A = LIVE VERIFIED (2026-11-22)** — discovery + skor + review. **4B = IMPLEMENTED / LIVE VERIFICATION PENDING (2026-11-22)** — antrean balasan, worker 2 langkah, API & panel Balasan; live balasan MATI (runtime: `REQUIRES_LIVE`), balasan nyata belum ada (perlu re-OAuth scope `threads_manage_replies` + izin live). **4C = LIVE VERIFIED (2026-11-22)** — kotak masuk balasan: tarik balasan dari post kita, setujui → pesan balasan; 20 post dipindai, 0 balasan, 0 gagal; auto-draft AI tersambung ke Gemini (opsional).
 
 - Ditambahkan: migrasi `007_trend_discovery.sql` (trend_settings, trend_items, trend_candidates, trend_runs); kontrak `trend.ts`; `TrendRepository`; worker `trend-provider` (RSS/Atom, tanpa dependensi), `trend-scoring` (skor 0–100 + alasan audit), `trend-processor` + dispatcher; API `/api/trends/*`; menu dashboard **Tren**.
 - Verifikasi nyata: 5 sumber RSS (detik, Kompas, CNN Indonesia, Antara, Republika) → 215 item, 115 baru, 5 draft `TREN_RELEVAN` berstatus `IN_REVIEW`, 0 kegagalan. Kegagalan sumber dicatat jujur (run pertama: CNN 404, Kumparan gagal, Tempo 403 → daftar bawaan dikoreksi).

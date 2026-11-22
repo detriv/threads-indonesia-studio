@@ -37,6 +37,7 @@ Fase 3 sudah terbukti end-to-end dengan post nyata ke Threads (container → pub
 - Status jujur: `PUBLISHED` (media_id wajib), `NEEDS_REVIEW` (ambigu, rekonsiliasi operator), `DUPLICATE`, `FAILED`, `REQUIRES_LIVE`.
 - Batas teks 500 karakter ditegakkan di API **dan** trigger PostgreSQL.
 - Balasan (Fase 4B): panel Balasan di Publikasi, live & jeda **terpisah** dari post, anti-duplikat per media+teks, kuota Meta 1.000/24 jam; scope `threads_manage_replies` + `threads_read_replies` (perlu re-OAuth).
+- Kotak masuk (Fase 4C): menu **Masuk** menarik balasan dari postingan kita, menyarankan balasan (auto-draft Gemini opsional), lalu operator menyetujui sebelum dipesan.
 
 **Keamanan & operasi**
 - Login admin sesi + CSRF (Argon2id); token Meta **tidak** disimpan di DB — hanya presence + kedaluwarsa; nilai token di file `0600` di worker.
