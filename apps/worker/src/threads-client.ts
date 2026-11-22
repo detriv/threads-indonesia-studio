@@ -29,6 +29,24 @@ export type InspectContainerInput = {
   sleep?: ((ms: number) => Promise<void>) | undefined;
 };
 
+export type PublishedUrlInput = {
+  mediaId: string;
+  credentials: ThreadsCredentials;
+  transport?: ThreadsTransport | undefined;
+};
+
+/** Ambil permalink asli dari Meta. Gagal → null (tidak menggagalkan publikasi).
+ * Meta mengembalikan threads.com/@username/post/<shortcode>, bukan /@<id>/post/<mediaId>. */
+export async function fetchPublishedUrl(input: PublishedUrlInput): Promise<string | null> {
+  const response = await (input.transport ?? fetch)(
+    `${THREADS_BASE_URL}/${input.mediaId}?fields=permalink&access_token=${encodeURIComponent(input.credentials.accessToken)}`,
+    { signal: AbortSignal.timeout(30_000) }
+  );
+  if (!response.ok) return null;
+  const body = await response.json() as { permalink?: string };
+  return body.permalink ?? null;
+}
+
 export type PublishingLimitInput = {
   credentials: ThreadsCredentials;
   transport?: ThreadsTransport | undefined;

@@ -124,7 +124,7 @@ let dispatching = false;
 const dispatchTimer = setInterval(() => {
   if (dispatching) return;
   dispatching = true;
-  void Promise.all([dispatchOutbox(pool, boss),dispatchGenerations(),dispatchThreadsPublish(threadsRepo,boss)])
+  void Promise.all([dispatchOutbox(pool, boss),dispatchGenerations(),dispatchThreadsPublish(threadsRepo,boss,pool)])
     .catch((error) => console.error('Dispatcher outbox gagal:', error instanceof Error ? error.message : error))
     .finally(() => { dispatching = false; });
 }, 1000);
@@ -133,7 +133,7 @@ dispatchTimer.unref();
 await withRetry('dispatcher awal', async () => {
   await dispatchOutbox(pool, boss);
   await dispatchGenerations();
-  await dispatchThreadsPublish(threadsRepo, boss);
+  await dispatchThreadsPublish(threadsRepo, boss, pool);
 }, 5, 1000);
 
 console.log('Worker DEMO + jadwal simulasi + Threads publish siap.');

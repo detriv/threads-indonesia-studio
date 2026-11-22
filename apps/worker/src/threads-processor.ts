@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { THREADS_JOB_NAME } from '@threads-id/contracts';
 import { threadsEnv, tokenExpired } from '@threads-id/db';
 import type { PublishQueueRow, ThreadsRepository } from '@threads-id/db';
-import type { ThreadsTransport } from './threads-client.js';
-import { assertLiveAllowed, fetchPublishingLimit, inspectContainer, publishTextPost, refreshLongLivedToken } from './threads-client.js';
+import type { ThreadsCredentials, ThreadsTransport } from './threads-client.js';
+import { assertLiveAllowed, fetchPublishingLimit, fetchPublishedUrl, inspectContainer, publishTextPost, refreshLongLivedToken } from './threads-client.js';
 
 export type ThreadsPublishDeps = {
   threads: ThreadsRepository;
@@ -19,11 +19,19 @@ export type ThreadsPublishDeps = {
   inspect?: typeof inspectContainer | undefined;
   /** Baca kuota sebelum publish; bisa disuntik di test. */
   limit?: typeof fetchPublishingLimit | undefined;
+  /** Ambil permalink asli; bisa disuntik di test. */
+  permalink?: (input: { mediaId: string; credentials: ThreadsCredentials }) => Promise<string | null> | undefined;
   /** Dipanggil saat hasil ambigu; worker melempar error agar pg-boss retry dengan backoff. */
   onAmbiguous?: (row: PublishQueueRow, code: string, message: string) => void;
 };
 
 const MAX_ATTEMPTS = 3;
+
+/** Permalink asli dari Meta; bila gagal, simpan null (publikasi tetap sukses). */
+async function publishedUrlFor(mediaId: string, credentials: ThreadsCredentials, deps: ThreadsPublishDeps): Promise<string | null> {
+  if (deps.permalink) return (await deps.permalink({ mediaId, credentials })) ?? null;
+  return fetchPublishedUrl({ mediaId, credentials, transport: deps.transport });
+}
 
 /**
  * Proses satu baris antrean publish:
@@ -101,7 +109,7 @@ export async function processThreadsPublish(queueId: string, deps: ThreadsPublis
     await deps.threads.recordAttempt({
       queueId, step: 'PUBLISH', outcome: 'OK', containerId: result.containerId, mediaId: result.mediaId
     });
-    await deps.threads.completePublished(queueId, result.mediaId, `https://www.threads.net/@${connection.userId}/post/${result.mediaId}`);
+    await deps.threads.completePublished(queueId, result.mediaId, await publishedUrlFor(result.mediaId, credentials, deps));
     return deps.threads.getQueue(queueId);
   }
   if (result.outcome === 'FAILED') {
@@ -137,9 +145,20 @@ export async function processThreadsPublish(queueId: string, deps: ThreadsPublis
   return deps.threads.getQueue(queueId);
 }
 
-/** Dispatcher: antrekan job pg-boss untuk baris QUEUED yang belum diproses. */
-export async function dispatchThreadsPublish(repo: ThreadsRepository, boss: { send: (name: string, data: { queueId: string }, options?: Record<string, unknown>) => Promise<string | null> }): Promise<void> {
+/** Dispatcher: antrekan job pg-boss untuk baris QUEUED yang belum diproses.
+ * singletonKey pg-boss tidak mencegah duplikat saat dispatcher berjalan tiap detik,
+ * jadi cek eksplisit job yang masih aktif — kalau tidak, ribuan job nyangkut. */
+export async function dispatchThreadsPublish(
+  repo: ThreadsRepository,
+  boss: { send: (name: string, data: { queueId: string }, options?: Record<string, unknown>) => Promise<string | null> },
+  pool: { query: (text: string, values: unknown[]) => Promise<{ rowCount: number | null }> }
+): Promise<void> {
   for (const id of await repo.pendingQueue()) {
+    const existing = await pool.query(
+      "SELECT 1 FROM pgboss.job WHERE name = $1 AND data->>'queueId' = $2 AND state IN ('created','active','retry') LIMIT 1",
+      [THREADS_JOB_NAME, id]
+    );
+    if (existing.rowCount) continue;
     await boss.send(THREADS_JOB_NAME, { queueId: id }, { singletonKey: id, retryLimit: MAX_ATTEMPTS, retryDelay: 60, retryBackoff: true });
   }
 }

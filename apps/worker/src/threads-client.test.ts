@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildAuthorizeUrl, assertTextWithinLimit, fetchPublishingLimit, inspectContainer, publishTextPost, refreshLongLivedToken } from './threads-client.js';
+import { buildAuthorizeUrl, assertTextWithinLimit, fetchPublishingLimit, fetchPublishedUrl, inspectContainer, publishTextPost, refreshLongLivedToken } from './threads-client.js';
 
 const creds = { appId: 'app', appSecret: 'secret', userId: '17841400000000000', accessToken: 'token-fixture' };
 const jsonResponse = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -84,6 +84,19 @@ describe('threads-client (Mock transport, bukan Meta nyata)', () => {
     expect(await fetchPublishingLimit({ credentials: creds, transport })).toEqual({ quotaUsage: 7, quotaTotal: 250, remaining: 243 });
     const empty = vi.fn(async () => jsonResponse({})) as unknown as typeof fetch;
     expect(await fetchPublishingLimit({ credentials: creds, transport: empty })).toEqual({ quotaUsage: null, quotaTotal: null, remaining: null });
+  });
+
+  it('permalink asli diambil dari Meta; kegagalan → null (publikasi tetap sukses)', async () => {
+    let called = '';
+    const transport = vi.fn(async (input: RequestInfo | URL) => {
+      called = String(input);
+      return jsonResponse({ permalink: 'https://www.threads.com/@lorem_ipsum7777/post/DgBw9cAEh37' });
+    }) as unknown as typeof fetch;
+    expect(await fetchPublishedUrl({ mediaId: '18033566909883283', credentials: creds, transport }))
+      .toBe('https://www.threads.com/@lorem_ipsum7777/post/DgBw9cAEh37');
+    expect(called).toContain('https://graph.threads.com/v1.0/18033566909883283?fields=permalink');
+    const gagal = vi.fn(async () => jsonResponse({}, 400)) as unknown as typeof fetch;
+    expect(await fetchPublishedUrl({ mediaId: 'x', credentials: creds, transport: gagal })).toBeNull();
   });
 
   it('refresh token long-lived memakai endpoint resmi graph.threads.com/refresh_access_token', async () => {
