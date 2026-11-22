@@ -1,5 +1,17 @@
 # WORKLOG — Phase 0
 
+## Fase 3 — verifikasi LIVE Meta Threads (post nyata terbit)
+
+**Fase3 = LIVE VERIFIED**, bukan COMPLETE (review independen belum ada). HEAD `55658a0`; branch `main`; stack utama 8080 diredeploy ke image baru; `.env` mode 0600; live **ON** atas izin eksplisit operator.
+
+- Kredensial: App ID `1002284449005696`; akun Threads `@lorem_ipsum7777`; **user_id kanonik `29713621341597282`**; token long-lived s/d 2027-01-21; scope `threads_basic,threads_content_publish`. Token live disimpan file `0600` di worker (`/tmp/threads-token/token`, 185 char); DB hanya presence + expiry. Token lama yang invalid di `.env` dikosongkan agar tidak menimpa token OAuth.
+- **Post nyata 3 baris `PUBLISHED`** (media_id + permalink diambil dari Meta, bukan diprediksi): `18033566909883283` → `https://www.threads.com/@lorem_ipsum7777/post/DgBw9cAEh37`; `18114336386231777` → `.../DgBxKWAkpxb`; `17949796110358338` → `.../DgBxqDnkjxK`.
+- **Bug nyata yang ditemukan & diperbaiki saat live**: (1) ID dari token-exchange (`…280`) ditolak Meta `code 100 "Object does not exist"` → ID kanonik diambil dari `GET /me?fields=id,username`; (2) `published_url` sebelumnya `threads.net/@<id>/post/<mediaId>` (format salah) → permalink asli `threads.com/@<user>/post/<shortcode>`; (3) dispatcher `dispatchThreadsPublish` mengirim job pg-boss **baru tiap detik** (93 job nyangkut `created`) → cek eksplisit job aktif sebelum `boss.send`.
+- Gate akhir: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip. Test baru: `fetchPublishedUrl` (sukses & gagal) dan `dispatchThreadsPublish` dedupe.
+- Alur operator: halaman Publikasi → "Buka halaman OAuth Meta" → login Threads → Authorize → callback publik menyimpan koneksi → toggle live ON → kirim antrean. Syarat Meta: akun Threads **publik** dan invite tester di-Accept di Settings → Account → Website permissions (error `1349245` bila belum).
+- Next exact action: review independen + keputusan COMPLETE. Matikan live via dashboard bila tidak dipakai. Jangan push tanpa persetujuan.
+
+
 ## Klarifikasi pengguna — prompt/chat Gemini menjadi teks draft/caption (working tree)
 
 Status **Fase2 IN PROGRESS / IMPLEMENTED — LIVE VERIFICATION PENDING**; review parent belum dilakukan. No commit/push/deploy main,0outbound Gemini/Threads. Hydrogen sebelumnya PROVIDER dan diagnostic45sTIMEOUT bukan root cause yang dibuktikan/diperbaiki di sini. `.env`, model, admin utama dan volume utama tidak disentuh.

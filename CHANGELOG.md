@@ -1,13 +1,14 @@
 # Changelog
 
-## Fase 3 — Posting Threads (IMPLEMENTED / LIVE VERIFICATION PENDING, belum commit)
+## Fase 3 — Posting Threads: LIVE VERIFIED (post nyata terbit)
 
 - Ditambahkan: kontrak Meta Threads (job name, batas 500 char, wait 30s, scope `threads_basic`+`threads_content_publish`), migrasi `006_threads_publish.sql`, API `/api/threads/*` (status koneksi, OAuth URL, callback GET publik + POST, toggle live, antrean publish, rekonsiliasi), worker 2 langkah container→publish, UI halaman Publikasi.
 - Perilaku: live mati default → antrean `REQUIRES_LIVE` (tanpa post nyata); live aktif → `QUEUED` → `PUBLISHED` (media_id wajib) / `NEEDS_REVIEW` (ambigu after-send, rekonsiliasi operator) / `FAILED`.
-- Gate: lint/typecheck/build/audit/diff-check exit 0; **73 unit + 87 integrasi PostgreSQL PASS**, 0 gagal/skip.
-- QA runtime nyata (stack terisolasi port 18093, live MATI): 12/12 skrip + browser Publikasi; antrean `REQUIRES_LIVE`, 0 panggilan Meta. Commit `5bd95f4`.
-- Perbaikan QA: worker tahan restart (RestartCount=0); status live jujur tanpa kredensial; fallback `THREADS_USER_ID/APP_ID` dari env.
-- Belum: kredensial Meta + post uji nyata. Tidak push.
+- **Live verified**: akun `@lorem_ipsum7777` (user_id kanonik `29713621341597282`), token long-lived s/d 2027-01-21. Tiga post nyata status `PUBLISHED` dengan permalink tervalidasi Meta: `18033566909883283` (DgBw9cAEh37), `18114336386231777` (DgBxKWAkpxb), `17949796110358338` (DgBxqDnkjxK).
+- Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip. Commit `55658a0`.
+- Perbaikan saat live: ID kanonik diambil dari `GET /me` (token-exchange berbeda); `published_url` memakai permalink asli `threads.com/@<user>/post/<shortcode>`; dispatcher publish mengecek job aktif agar tidak mengirim duplikat tiap detik.
+- QA runtime nyata (stack terisolasi port 18093, live MATI): 12/12 skrip + browser Publikasi; antrean `REQUIRES_LIVE`, 0 panggilan Meta.
+- Catatan: live masih **ON**; matikan lewat dashboard bila tidak dipakai. Belum COMPLETE (review independen belum ada); tidak push.
 
 ## Checkpoint terbaru — adaptasi teks prompt/chat (working tree, belum commit)
 

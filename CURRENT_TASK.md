@@ -1,14 +1,18 @@
 # CURRENT TASK
 
-## Checkpoint terbaru — Fase 3 Posting Threads (working tree, belum commit)
+## Checkpoint terbaru — Fase 3 Posting Threads: LIVE VERIFIED
 
-**Fase: 3 — Posting Threads. IMPLEMENTED / LIVE VERIFICATION PENDING, bukan COMPLETE.** Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING. Branch `main`, HEAD `fefb8dc`; semua perubahan Fase 3 belum commit/push.
+**Fase: 3 — Posting Threads. LIVE VERIFIED (post nyata terbit), belum COMPLETE (review independen belum ada).** Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING. Branch `main`, HEAD `55658a0`.
 
-- Done: kontrak Meta Threads + batas 500 char + scope granular; migrasi `006_threads_publish.sql` (threads_connection, publish_queue, publish_attempts + trigger guard); API `/api/threads/{connection,oauth-url,oauth-callback,live,publish,publish/:id/resolve}`; worker `threads-client` + `threads-processor` + dispatcher; adapter jadwal memilih simulasi vs Meta; UI halaman Publikasi.
-- Verifikasi nyata: lint/typecheck/test:all/build/audit/diff-check exit 0; **73 unit + 85 integrasi PostgreSQL PASS**, 0 gagal/skip.
-- Remaining: kredensial Meta (`THREADS_APP_ID/SECRET/USER_ID/ACCESS_TOKEN`) + izin eksplisit operator untuk live post uji. Live default MATI; antrean live-mati dicatat REQUIRES_LIVE, bukan post nyata.
-- Next exact action: live post uji hanya setelah kredensial Meta + izin operator. Jangan tandai COMPLETE sebelum post uji terbit.
-- **QA runtime nyata PASS** (port 18093, commit `5bd95f4`): 12/12 skrip + browser halaman Publikasi; live MATI → `REQUIRES_LIVE`, 0 panggilan Meta.
+- Kredensial: App ID `1002284449005696`; akun `@lorem_ipsum7777`; user_id kanonik `29713621341597282`; token long-lived s/d 2027-01-21; scope `threads_basic,threads_content_publish`; kuota 250/24 jam.
+- **Post nyata terbit (live)**: 3 baris `PUBLISHED` dengan media_id + permalink tervalidasi dari Meta:
+  - `18033566909883283` → https://www.threads.com/@lorem_ipsum7777/post/DgBw9cAEh37
+  - `18114336386231777` → https://www.threads.com/@lorem_ipsum7777/post/DgBxKWAkpxb
+  - `17949796110358338` → https://www.threads.com/@lorem_ipsum7777/post/DgBxqDnkjxK
+- Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip.
+- Temuan & perbaikan saat verifikasi live: ID token-exchange (`…280`) ≠ ID kanonik (`…282`) → ambil dari `GET /me`; `published_url` memakai permalink asli `threads.com/@<user>/post/<shortcode>`; dispatcher publish kini mengecek job aktif agar tidak mengirim duplikat tiap detik.
+- Live masih **ON**; matikan lewat dashboard (Publikasi → "Matikan live") bila tidak dipakai. Akun Threads harus publik; invite tester harus di-Accept di Settings → Account → Website permissions.
+- Next exact action: review independen + keputusan COMPLETE. Jangan push/deploy ke main tanpa persetujuan.
 
 - Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.
 - Final gates aktual: `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0, **62unit/behavior+71integrasi PostgreSQL**,0gagal/skip,5workspace build/typecheckPASS,audit0. Tests transport adalah mock lokal, bukan Gemini nyata. RED/GREEN rinci ada di WORKLOG.

@@ -1,14 +1,14 @@
 # PHASE STATE
 
-## Checkpoint terbaru — Fase 3 Posting Threads (working tree, belum commit)
+## Checkpoint terbaru — Fase 3 Posting Threads: LIVE VERIFIED
 
-Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase 3 = IMPLEMENTED / LIVE VERIFICATION PENDING**, bukan COMPLETE. HEAD `fefb8dc`; Fase 2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING. Perubahan Fase 3 belum commit/push.
+Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase 3 = LIVE VERIFIED** (3 post nyata terbit, media_id + permalink tervalidasi Meta), HEAD `55658a0`; Fase 2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING.
 
-- Meta OAuth (authorize + code→long-lived 60 hari), antrean publish manual & terjadwal, worker 2 langkah (container→publish), status PUBLISHED/NEEDS_REVIEW/DUPLICATE/REQUIRES_LIVE, UI halaman Publikasi, gate live default mati.
-- Final gates: lint/typecheck/test:all/build/audit/diff-check exit 0; **73 unit + 85 integrasi PostgreSQL**, 0 gagal/skip. Transport Meta = mock lokal.
-- Idempotensi & keamanan: klaim atomik antrean; ambigu after-send → NEEDS_REVIEW (tanpa kirim ulang buta); token Meta tidak masuk DB (presence + expiry saja, file 0600).
-- Belum ada kredensial Meta & post uji nyata. Next exact action: live post uji hanya dengan izin eksplisit.
-- **QA runtime nyata PASS**: stack terisolasi port 18093, 12/12 skrip + browser Publikasi, live MATI → `REQUIRES_LIVE`, 0 panggilan Meta. Worker RestartCount=0.
+- Kredensial: App ID `1002284449005696`; akun `@lorem_ipsum7777`; user_id kanonik `29713621341597282`; token long-lived s/d 2027-01-21; scope `threads_basic,threads_content_publish`.
+- **Post nyata**: `18033566909883283` (DgBw9cAEh37), `18114336386231777` (DgBxKWAkpxb), `17949796110358338` (DgBxqDnkjxK) — semua status `PUBLISHED`.
+- Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL PASS**, 0 gagal/skip.
+- Perbaikan saat live: ID kanonik dari `/me` (token-exchange berbeda), permalink asli, dedupe dispatcher.
+- Live masih ON; matikan lewat dashboard bila tidak dipakai. Next: review independen + keputusan COMPLETE.
 
 - Adapter tetap `generateContent` prompt/chat → plain text draft/caption; tanpa output JSON schema. Ordinary purpose1teks; Coba tema1call/attempt,3bagian strict → aplikasi menetapkan2pendek+1detail, normalized-distinct/<=500, tanpa jadwal. Semua guard editorial/concurrency/quota/fallback lama dipertahankan. Kontrak lengkap `docs/PHASE2.md`.
 - Final gates aktual: `npm run lint && npm run typecheck && npm run test:all && npm run build && npm audit --audit-level=moderate && git diff --check` exit0, **62unit/behavior+71integrasi PostgreSQL**,0gagal/skip,5workspace build/typecheckPASS,audit0. Tests transport adalah mock lokal, bukan Gemini nyata. RED/GREEN rinci ada di WORKLOG.
@@ -22,7 +22,7 @@ Bagian ini adalah status saat ini; histori checkpoint/provider di bawah dipertah
 | Phase 0 — fondasi + simulasi | COMPLETE | lint, typecheck, 4 tests, build, audit, Docker E2E, browser UI, editorial payload, restart persistence passed |
 | Phase 1 — Dashboard editorial | COMPLETE | `7bea826`; 17 unit + 52 integrasi, lint/typecheck/build/audit, Docker smoke/restart, QA browser fixture, review independen PASS; QA manual pengguna PASS (login dan dialog native) |
 | Fase 2 — Konten Gemini | IMPLEMENTED / LIVE VERIFICATION PENDING | 35 unit + 69 integrasi PostgreSQL PASS; lint/typecheck/build 5 workspace/audit 0, Docker smoke/restart terisolasi PASS; browser fixture generate/revise/failure/fallback PASS. Runtime `6ea5314`; review parent dan independen approved. Live Gemini PENDING (key/izin belum tersedia). |
-| Fase 3 — Posting Threads | IMPLEMENTED / LIVE VERIFICATION PENDING | Kontrak + migrasi `006_threads_publish.sql` + API `/api/threads/*` + worker 2 langkah + UI Publikasi; 73 unit + 85 integrasi PASS; live default mati; post uji nyata PENDING |
+| Fase 3 — Posting Threads | LIVE VERIFIED | Kontrak + migrasi `006_threads_publish.sql` + API `/api/threads/*` + worker 2 langkah + UI Publikasi; 80 unit + 89 integrasi PASS; live default mati; **3 post nyata PUBLISHED** (media_id + permalink tervalidasi Meta) |
 | Fase 4–6 | NOT STARTED | Lihat `docs/ROADMAP.md` |
 | Fase Z — Multi API Key Rotasi | NOT STARTED (extendable) | Hanya setelah Fase 2 live PASS + persetujuan operator |
 

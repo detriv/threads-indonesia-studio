@@ -1,16 +1,16 @@
 # AGENT STATE
 
-## Checkpoint terbaru — Fase 3 Posting Threads (working tree, belum commit)
+## Checkpoint terbaru — Fase 3 Posting Threads: LIVE VERIFIED
 
-Bagian ini status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase 3 = IMPLEMENTED / LIVE VERIFICATION PENDING**, bukan COMPLETE. HEAD `fefb8dc`; Fase 2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING (live Gemini belum berhasil). Semua perubahan Fase 3 belum commit/push.
+Bagian ini status saat ini; histori checkpoint/provider di bawah dipertahankan. **Fase 3 = LIVE VERIFIED** (3 post nyata terbit, media_id + permalink tervalidasi Meta), HEAD `55658a0`; Fase 2 tetap IMPLEMENTED / LIVE VERIFICATION PENDING. Belum COMPLETE (review independen belum ada); tidak push.
 
-- Cakupan Fase 3: Meta OAuth (authorize + code→long-lived 60 hari), antrean publish manual & terjadwal, worker 2 langkah (container→publish), status jujur PUBLISHED/NEEDS_REVIEW/DUPLICATE/REQUIRES_LIVE, UI halaman Publikasi, gate live `THREADS_LIVE_POSTING=false` default.
-- Final gates aktual: lint/typecheck/test:all/build/audit/diff-check exit 0; **73 unit + 85 integrasi PostgreSQL**, 0 gagal/skip. Transport Meta diuji dengan mock lokal, bukan Meta nyata.
-- Idempotensi: klaim atomik antrean (hanya satu worker memanggil Meta), timeout/ambigu → NEEDS_REVIEW + rekonsiliasi operator (tanpa kirim ulang buta), konkuren 2 proses → 1 panggilan container.
-- Keamanan: token Meta TIDAK masuk DB (hanya presence + expiry); token di file 0600 lewat volume `threads_token`; dashboard tidak pernah menampilkan token/secret.
-- Belum ada kredensial Meta lokal & belum ada post uji nyata. Kriteria "satu post uji terbit di akun yang diizinkan" masih PENDING.
-- Next exact action: commit fokus Fase 3 (kode) + commit dokumen terpisah; lalu QA runtime stack terisolasi dengan live MATI; live post uji baru dengan izin eksplisit operator.
-- **QA runtime nyata PASS** (stack terisolasi `threads-phase3-qa-bf8b7b07`, port 18093): 12/12 skrip + browser halaman Publikasi; live MATI → antrean `REQUIRES_LIVE`, 0 panggilan Meta. Commit `5bd95f4`.
+- Kredensial: App ID `1002284449005696`; akun `@lorem_ipsum7777`; user_id kanonik `29713621341597282`; token long-lived s/d 2027-01-21; scope `threads_basic,threads_content_publish`.
+- Post nyata: `18033566909883283` (DgBw9cAEh37), `18114336386231777` (DgBxKWAkpxb), `17949796110358338` (DgBxqDnkjxK) — semua `PUBLISHED`.
+- Gate: lint/typecheck/build 0; **80 unit + 89 integrasi PostgreSQL**, 0 gagal/skip.
+- Idempotensi: klaim atomik antrean; ambigu → NEEDS_REVIEW; konkuren 2 proses → 1 panggilan container; dispatcher publish kini tidak mengirim job duplikat.
+- Keamanan: token Meta TIDAK masuk DB (presence + expiry); token file `0600` di worker; dashboard tidak pernah menampilkan token/secret.
+- Live masih **ON**; matikan lewat dashboard (Publikasi) bila tidak dipakai. Syarat Meta: akun Threads publik + invite tester di-Accept di Settings → Account → Website permissions.
+- Next exact action: review independen + keputusan COMPLETE; jangan push tanpa persetujuan.
 
 - Fase aktif: **3 — Posting Threads / IMPLEMENTED — LIVE VERIFICATION PENDING**. Fase 0/1 COMPLETE; Fase 2 IMPLEMENTED / LIVE VERIFICATION PENDING; Fase 4–6 dan Z NOT STARTED.
 
