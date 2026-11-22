@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { THREADS_JOB_NAME } from '@threads-id/contracts';
-import { threadsEnv } from '@threads-id/db';
+import { threadsEnv, tokenExpired } from '@threads-id/db';
 import type { PublishQueueRow, ThreadsRepository } from '@threads-id/db';
 import type { ThreadsTransport } from './threads-client.js';
-import { assertLiveAllowed, fetchPublishingLimit, inspectContainer, publishTextPost } from './threads-client.js';
+import { assertLiveAllowed, fetchPublishingLimit, inspectContainer, publishTextPost, refreshLongLivedToken } from './threads-client.js';
 
 export type ThreadsPublishDeps = {
   threads: ThreadsRepository;
@@ -11,6 +11,8 @@ export type ThreadsPublishDeps = {
   transport?: ThreadsTransport | undefined;
   /** Token Meta dari environment server / file yang ditulis API saat OAuth. */
   token?: () => string | undefined;
+  /** Simpan token baru setelah refresh (file 0600); tidak pernah ke DB. */
+  persistToken?: (token: string) => Promise<void> | undefined;
   /** Tidur ~30 detik sebelum publish (Meta); bisa disuntik di test. */
   sleep?: ((ms: number) => Promise<void>) | undefined;
   /** Rekonsiliasi status container saat ambigu; bisa disuntik di test. */
@@ -45,12 +47,27 @@ export async function processThreadsPublish(queueId: string, deps: ThreadsPublis
   }
   // DB (hasil OAuth) adalah sumber utama; env menjadi fallback bila operator mengisi manual.
   const envFallback = threadsEnv();
+  const tokenValue = deps.token?.() ?? envFallback.accessToken;
   const effective = {
     ...connection,
     appId: connection.appId ?? envFallback.appId,
     userId: connection.userId ?? envFallback.userId,
-    accessTokenPresent: connection.accessTokenPresent || Boolean(envFallback.accessToken) || Boolean(deps.token?.())
+    accessTokenPresent: connection.accessTokenPresent || Boolean(tokenValue)
   };
+  // Token long-lived 60 hari: segarkan otomatis bila sudah kedaluwarsa.
+  if (tokenExpired(connection.tokenExpiresAt)) {
+    try {
+      const refreshed = await refreshLongLivedToken({ accessToken: tokenValue, transport: deps.transport });
+      await deps.persistToken?.(refreshed.accessToken);
+      const expiresAt = new Date(Date.now() + (refreshed.expiresIn ?? 60 * 24 * 3600) * 1000);
+      await deps.threads.updateToken(expiresAt.toISOString());
+      effective.tokenExpiresAt = expiresAt.toISOString();
+      deps.token = () => refreshed.accessToken;
+    } catch {
+      await deps.threads.markFailed(queueId, 'TOKEN_EXPIRED', 'Token Threads kedaluwarsa dan refresh gagal; hubungkan ulang lewat OAuth.');
+      return deps.threads.getQueue(queueId);
+    }
+  }
   try {
     assertLiveAllowed(effective);
   } catch (error) {
@@ -62,7 +79,7 @@ export async function processThreadsPublish(queueId: string, deps: ThreadsPublis
     appId: effective.appId!,
     appSecret: '',
     userId: effective.userId!,
-    accessToken: deps.token?.() ?? envFallback.accessToken
+    accessToken: deps.token?.() ?? ''
   };
   if (!credentials.appId || !credentials.userId || !credentials.accessToken) {
     await deps.threads.markFailed(queueId, 'CONFIG', 'THREADS_APP_ID/THREADS_USER_ID/THREADS_ACCESS_TOKEN belum lengkap di server.');

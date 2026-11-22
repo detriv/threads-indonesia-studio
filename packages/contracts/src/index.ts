@@ -5,7 +5,7 @@ export const DEMO_JOB_NAME = 'demo.synthetic-age-20s' as const;
 
 // ===== Phase 3: Meta Threads =====
 export const THREADS_JOB_NAME = 'threads.publish-text' as const;
-export const THREADS_BASE_URL = 'https://graph.threads.net/v1.0' as const;
+export const THREADS_BASE_URL = 'https://graph.threads.com/v1.0' as const;
 /** Meta: teks post maksimal 500 karakter; emoji dihitung sebagai byte UTF-8. */
 export const THREADS_MAX_TEXT = 500 as const;
 /** Meta merekomendasikan menunggu ~30 detik sebelum publish; polling status 1/menit, maksimal 5 menit. */

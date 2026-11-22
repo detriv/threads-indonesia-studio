@@ -153,6 +153,32 @@ describe('worker publish Threads (PostgreSQL, transport dimock)', () => {
     }
   });
 
+  it('token kedaluwarsa → refresh otomatis lalu publish (mock)', async () => {
+    await threads.upsertConnection({ appId: 'app', appSecretPresent: true, userId: 'user', accessTokenPresent: true, tokenExpiresAt: new Date(Date.now() - 1000).toISOString(), status: 'TOKEN_EXPIRED', livePosting: true, scopes: 'threads_basic,threads_content_publish' });
+    const draft = await drafts.create({ themeId, format: 'OBSERVASI_PENDEK', text: 'Refresh token uji.' });
+    const queue = await threads.enqueue({ draftId: draft.id, trigger: 'MANUAL', requestedBy: 'admin', liveEnabled: true });
+    const persisted: string[] = [];
+    const result = await processThreadsPublish(queue.id, {
+      threads,
+      token: () => 'token-lama',
+      persistToken: async (token) => { persisted.push(token); },
+      draftText: async (id) => ({ id, text: draft.text }),
+      sleep: noSleep,
+      limit: async () => ({ quotaUsage: 0, quotaTotal: 250, remaining: 250 }),
+      transport: vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/refresh_access_token')) return new Response(JSON.stringify({ access_token: 'token-baru', expires_in: 5184000 }), { status: 200 });
+        if (url.endsWith('/threads')) return new Response(JSON.stringify({ id: 'container-refresh' }), { status: 200 });
+        if (url.includes('/threads_publish')) return new Response(JSON.stringify({ id: 'media-refresh' }), { status: 200 });
+        return new Response(JSON.stringify({ data: [{ quota_usage: 0, config: { quota_total: 250 } }] }), { status: 200 });
+      }) as unknown as typeof fetch
+    });
+    expect(result).toMatchObject({ status: 'PUBLISHED', mediaId: 'media-refresh' });
+    expect(persisted).toEqual(['token-baru']);
+    const connection = await threads.getConnection();
+    expect(connection?.tokenExpiresAt && Date.parse(connection.tokenExpiresAt) > Date.now()).toBe(true);
+  });
+
   it('konkuren/restart: dua proses worker sama antrean hanya satu yang memanggil Meta', async () => {
     await threads.upsertConnection({ appId: 'app', appSecretPresent: true, userId: 'user', accessTokenPresent: true, status: 'CONNECTED', livePosting: true, scopes: 'threads_basic,threads_content_publish' });
     const draft = await drafts.create({ themeId, format: 'OBSERVASI_PENDEK', text: 'Konkuren mock.' });

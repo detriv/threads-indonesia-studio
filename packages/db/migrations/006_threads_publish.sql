@@ -81,8 +81,9 @@ CREATE OR REPLACE FUNCTION guard_publish_text_limit() RETURNS trigger LANGUAGE p
 DECLARE draft_text text;
 BEGIN
   SELECT text INTO draft_text FROM drafts WHERE id = NEW.draft_id;
-  IF char_length(draft_text) > 500 THEN
-    RAISE EXCEPTION 'Teks draft melebihi 500 karakter (Threads)';
+  -- Meta menghitung batas 500 dengan byte UTF-8 (emoji = beberapa byte), bukan jumlah kodepoint.
+  IF octet_length(draft_text) > 500 THEN
+    RAISE EXCEPTION 'Teks draft melebihi 500 byte UTF-8 (Threads)';
   END IF;
   RETURN NEW;
 END $$;

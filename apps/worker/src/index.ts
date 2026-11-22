@@ -63,6 +63,14 @@ function workerAccessToken(): string | undefined {
   }
 }
 
+/** Simpan token hasil refresh ke file yang sama (0600). Nilai token tidak pernah ke DB. */
+async function persistWorkerToken(token: string): Promise<void> {
+  const { writeFile, chmod } = await import('node:fs/promises');
+  const path = process.env.THREADS_TOKEN_FILE ?? '/tmp/threads-token/token';
+  await writeFile(path, `${token}\n`, { mode: 0o600 });
+  await chmod(path, 0o600);
+}
+
 const threadsAdapter: ThreadsPublishAdapter = {
   async enqueueFromSchedule({ draftId, scheduleId }) {
     const live = threadsLive();
@@ -82,6 +90,7 @@ await boss.work(THREADS_JOB_NAME, { batchSize: 1 }, async (jobs) => {
     const outcome = await processThreadsPublish(queueId, {
       threads: threadsRepo,
       token: workerAccessToken,
+      persistToken: persistWorkerToken,
       draftText: async (draftId) => {
         const draft = await drafts.get(draftId);
         return draft ? { id: draft.id, text: draft.text } : null;

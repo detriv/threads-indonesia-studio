@@ -56,7 +56,7 @@ export function buildAuthorizeUrl(input: { appId: string; redirectUri: string; s
     response_type: 'code',
     state: input.state
   });
-  return `https://threads.net/oauth/authorize?${params.toString()}`;
+  return `https://threads.com/oauth/authorize?${params.toString()}`;
 }
 
 export function assertLiveAllowed(connection: ThreadsConnection): void {
@@ -69,9 +69,11 @@ export function assertLiveAllowed(connection: ThreadsConnection): void {
   if (!scopes.includes('threads_basic') || !scopes.includes('threads_content_publish')) throw new Error('SCOPE_MISSING');
 }
 
-/** Teks divalidasi di aplikasi sebelum panggilan API (batas Meta 500 karakter). */
+/** Teks divalidasi di aplikasi sebelum panggilan API.
+ * Meta membatasi 500 "karakter" di mana emoji dihitung sebagai jumlah byte UTF-8,
+ * jadi penegakan memakai octet/byte length, bukan jumlah kodepoint. */
 export function assertTextWithinLimit(text: string): void {
-  if ([...text].length > THREADS_MAX_TEXT) throw new Error('TEXT_TOO_LONG');
+  if (Buffer.byteLength(text, 'utf8') > THREADS_MAX_TEXT) throw new Error('TEXT_TOO_LONG');
 }
 
 type GraphError = { error?: { code?: number; error_subcode?: number; message?: unknown }; message?: unknown };
@@ -184,13 +186,39 @@ export async function fetchPublishingLimit(input: PublishingLimitInput): Promise
       `${THREADS_BASE_URL}/${input.credentials.userId}/threads_publishing_limit?fields=quota_usage,config&access_token=${encodeURIComponent(input.credentials.accessToken)}`,
       { signal: AbortSignal.timeout(30_000) }
     );
-    const body = await safeJson(response) as { quota_usage?: number; config?: { quota_total?: number } };
-    const quotaUsage = typeof body?.quota_usage === 'number' ? body.quota_usage : null;
-    const quotaTotal = typeof body?.config?.quota_total === 'number' ? body.config.quota_total : null;
+    const body = await safeJson(response) as {
+      data?: Array<{ quota_usage?: number; config?: { quota_total?: number } }>;
+      quota_usage?: number; config?: { quota_total?: number };
+    };
+    // Dokumentasi Meta: respons dibungkus {"data":[{...}]}. Terima juga bentuk tanpa pembungkus.
+    const entry = Array.isArray(body?.data) ? body.data[0] : body;
+    const quotaUsage = typeof entry?.quota_usage === 'number' ? entry.quota_usage : null;
+    const quotaTotal = typeof entry?.config?.quota_total === 'number' ? entry.config.quota_total : null;
     return { quotaUsage, quotaTotal, remaining: quotaUsage === null || quotaTotal === null ? null : Math.max(0, quotaTotal - quotaUsage) };
   } catch {
     return { quotaUsage: null, quotaTotal: null, remaining: null };
   }
+}
+
+/** Perbarui token long-lived (60 hari) sebelum kedaluwarsa.
+ * Meta: GET /refresh_access_token?grant_type=th_refresh_token&access_token=... (tanpa client_secret). */
+export async function refreshLongLivedToken(input: {
+  accessToken: string;
+  transport?: ThreadsTransport | undefined;
+}): Promise<{ accessToken: string; expiresIn: number | null }> {
+  const transport = input.transport ?? fetch;
+  let response: Response;
+  try {
+    response = await transport(
+      `https://graph.threads.com/refresh_access_token?grant_type=th_refresh_token&access_token=${encodeURIComponent(input.accessToken)}`,
+      { signal: AbortSignal.timeout(30_000) }
+    );
+  } catch {
+    throw new Error('PROVIDER');
+  }
+  const body = await safeJson(response) as { access_token?: string; expires_in?: number; error_message?: string };
+  if (!response.ok || !body?.access_token) throw new Error('PROVIDER');
+  return { accessToken: body.access_token, expiresIn: typeof body.expires_in === 'number' ? body.expires_in : null };
 }
 
 async function safeJson(response: Response): Promise<unknown> {

@@ -172,7 +172,7 @@ export function registerThreadsRoutes(app: FastifyInstance, threads: ThreadsRepo
 
 /** Tukar code OAuth (pendek) → token long-lived 60 hari. Hanya dipanggil server. */
 export async function exchangeOAuthCode(input: { code: string; appId: string; appSecret: string; redirectUri: string }): Promise<{ accessToken: string; expiresIn: number | null; userId: string }> {
-  const shortResponse = await fetch('https://graph.threads.net/oauth/access_token', {
+  const shortResponse = await fetch('https://graph.threads.com/oauth/access_token', {
     method: 'POST',
     body: new URLSearchParams({
       client_id: input.appId, client_secret: input.appSecret, code: input.code,
@@ -185,7 +185,7 @@ export async function exchangeOAuthCode(input: { code: string; appId: string; ap
     throw new OAuthError(shortBody.error_message ?? shortBody.error_type ?? `Meta menolak penukaran code (HTTP ${shortResponse.status}).`);
   }
   const longResponse = await fetch(
-    `https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=${encodeURIComponent(input.appSecret)}&access_token=${encodeURIComponent(shortBody.access_token)}`,
+    `https://graph.threads.com/access_token?grant_type=th_exchange_token&client_secret=${encodeURIComponent(input.appSecret)}&access_token=${encodeURIComponent(shortBody.access_token)}`,
     { signal: AbortSignal.timeout(30_000) }
   );
   const longBody = await longResponse.json() as { access_token?: string; expires_in?: number; error_message?: string };

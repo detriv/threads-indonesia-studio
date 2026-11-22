@@ -110,6 +110,14 @@ export class ThreadsRepository {
     };
   }
 
+  /** Perbarui token setelah refresh otomatis (nilai token sendiri tidak pernah disimpan di DB). */
+  async updateToken(tokenExpiresAt: string, accessTokenPresent = true): Promise<void> {
+    await this.pool.query(
+      'UPDATE threads_connection SET token_expires_at = $1, access_token_present = $2, updated_at = now() WHERE id = 1',
+      [tokenExpiresAt, accessTokenPresent]
+    );
+  }
+
   async setLivePosting(livePosting: boolean, note?: string): Promise<ThreadsConnection> {
     const current = await this.getConnection();
     const env = threadsEnv();

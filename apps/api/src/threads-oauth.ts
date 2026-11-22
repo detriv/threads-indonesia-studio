@@ -10,7 +10,7 @@ export function buildAuthorizeUrl(input: { appId: string; redirectUri: string; s
     response_type: 'code',
     state: input.state
   });
-  return `https://threads.net/oauth/authorize?${params.toString()}`;
+  return `https://threads.com/oauth/authorize?${params.toString()}`;
 }
 
 export const DEFAULT_OAUTH_REDIRECT = 'http://127.0.0.1:8080/api/threads/oauth-callback';

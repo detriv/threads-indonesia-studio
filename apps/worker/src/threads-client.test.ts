@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildAuthorizeUrl, assertTextWithinLimit, fetchPublishingLimit, inspectContainer, publishTextPost } from './threads-client.js';
+import { buildAuthorizeUrl, assertTextWithinLimit, fetchPublishingLimit, inspectContainer, publishTextPost, refreshLongLivedToken } from './threads-client.js';
 
 const creds = { appId: 'app', appSecret: 'secret', userId: '17841400000000000', accessToken: 'token-fixture' };
 const jsonResponse = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -7,7 +7,7 @@ const jsonResponse = (body: unknown, status = 200) => new Response(JSON.stringif
 describe('threads-client (Mock transport, bukan Meta nyata)', () => {
   it('URL OAuth memakai scope granular dan redirect yang terdaftar', () => {
     const url = buildAuthorizeUrl({ appId: 'app-id', redirectUri: 'http://127.0.0.1:8080/api/threads/oauth-callback', state: 'state-123', scopes: ['threads_basic', 'threads_content_publish'] });
-    expect(url).toContain('https://threads.net/oauth/authorize?');
+    expect(url).toContain('https://threads.com/oauth/authorize?');
     expect(url).toContain('client_id=app-id');
     expect(url).toContain('scope=threads_basic%2Cthreads_content_publish');
     expect(url).toContain('response_type=code');
@@ -64,6 +64,37 @@ describe('threads-client (Mock transport, bukan Meta nyata)', () => {
     expect((await publishTextPost({ text: 'A', credentials: creds, transport: transport401, sleep: async () => undefined })).outcome).toBe('FAILED');
     const transport403 = vi.fn(async () => jsonResponse({ error: { message: 'scope' } }, 403)) as unknown as typeof fetch;
     expect((await publishTextPost({ text: 'A', credentials: creds, transport: transport403, sleep: async () => undefined })).outcome).toBe('FAILED');
+  });
+
+  it('menolak teks di atas 500 byte UTF-8 (emoji = 4 byte), bukan jumlah kodepoint', () => {
+    expect(assertTextWithinLimit('x'.repeat(500))).toBeUndefined();
+    expect(() => assertTextWithinLimit('x'.repeat(501))).toThrow('TEXT_TOO_LONG');
+    expect(assertTextWithinLimit('😀'.repeat(125))).toBeUndefined(); // 125 × 4 = 500 byte
+    expect(() => assertTextWithinLimit('😀'.repeat(126))).toThrow('TEXT_TOO_LONG'); // 504 byte
+  });
+
+  it('URL authorize memakai host resmi threads.com', () => {
+    const url = buildAuthorizeUrl({ appId: 'app-id', redirectUri: 'http://127.0.0.1:8080/api/threads/oauth-callback', state: 's', scopes: ['threads_basic', 'threads_content_publish'] });
+    expect(url).toContain('https://threads.com/oauth/authorize?');
+    expect(url).not.toContain('threads.net/oauth');
+  });
+
+  it('publishing limit membaca pembungkus {"data":[{...}]} sesuai dokumentasi', async () => {
+    const transport = vi.fn(async () => jsonResponse({ data: [{ quota_usage: 7, config: { quota_total: 250 } }] })) as unknown as typeof fetch;
+    expect(await fetchPublishingLimit({ credentials: creds, transport })).toEqual({ quotaUsage: 7, quotaTotal: 250, remaining: 243 });
+    const empty = vi.fn(async () => jsonResponse({})) as unknown as typeof fetch;
+    expect(await fetchPublishingLimit({ credentials: creds, transport: empty })).toEqual({ quotaUsage: null, quotaTotal: null, remaining: null });
+  });
+
+  it('refresh token long-lived memakai endpoint resmi graph.threads.com/refresh_access_token', async () => {
+    let called = '';
+    const transport = vi.fn(async (input: RequestInfo | URL) => {
+      called = String(input);
+      return jsonResponse({ access_token: 'token-baru', expires_in: 5184000 });
+    }) as unknown as typeof fetch;
+    const result = await refreshLongLivedToken({ accessToken: 'token-lama', transport });
+    expect(called).toContain('https://graph.threads.com/refresh_access_token?grant_type=th_refresh_token');
+    expect(result).toEqual({ accessToken: 'token-baru', expiresIn: 5184000 });
   });
 
   it('container PUBLISHED saat rekonsiliasi → DUPLICATE, bukan publish ulang', async () => {
