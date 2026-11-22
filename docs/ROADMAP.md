@@ -1,6 +1,6 @@
 # Roadmap
 
-Status kini: Fase 0/1 COMPLETE; Fase 2 **IMPLEMENTED / LIVE VERIFICATION PENDING** (live Gemini belum berhasil); Fase 3 **IMPLEMENTED / LIVE VERIFICATION PENDING** (kode + UI + idempotensi + QA runtime live-mati PASS; belum ada kredensial Meta / post uji nyata); Fase 4–6 dan Z belum dimulai. Lihat [konfigurasi dan bukti Fase 2](PHASE2.md) dan state file.
+Status kini: Fase 0/1/3 COMPLETE; Fase 2 **IMPLEMENTED / LIVE VERIFICATION PENDING** (live Gemini belum berhasil); Fase 4–6 dan Z belum dimulai. Lihat [konfigurasi dan bukti Fase 2](PHASE2.md) dan state file.
 
 | Fase | Hasil | Kriteria utama |
 |---|---|---|

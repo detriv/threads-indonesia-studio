@@ -15,6 +15,33 @@ Dashboard editorial untuk satu admin dan satu akun Threads Indonesia, fokus pada
 
 Fase 3 sudah terbukti end-to-end dengan post nyata ke Threads (container → publish → `media_id` + permalink). **Publikasi live tetap MATI secara default** dan hanya aktif setelah operator menyetelnya di dashboard. Detail verifikasi ada di `PHASE_STATE.md` dan `WORKLOG.md`; rencana kerja di `docs/ROADMAP.md`.
 
+## Fitur
+
+**Editorial**
+- Tema & Gaya: pilar cerita, bobot tema (total 100%), campuran format (70% observasi · 20% bahasan · 10% tren), batas post harian & jeda publikasi, contoh suara akun, catatan pengalaman pemilik, topik yang perlu ditinjau.
+- Draft: buat/edit/kunci draft, tiga format (observasi pendek, bahasan lebih dalam, tren relevan); draft tren wajib memuat URL sumber, waktu sumber, dan alasan relevansi.
+- Review tren: gerbang approve/kembalikan dengan catatan reviewer; approval dibatalkan bila draft diubah substantif.
+
+**Konten Gemini**
+- Lima tujuan generasi: ide konten, post pendek, bahasan lebih dalam, revisi draft, dan *Coba tema* (tepat tiga draft, tanpa jadwal).
+- Provider `simulation` (default) atau Gemini Developer API opt-in; model per tujuan, kuota harian terpisah, pemakaian token & perkiraan biaya, fallback ke draft reguler, dan pembedaan jelas antara simulasi vs respons model nyata.
+
+**Penjadwalan & riwayat**
+- Jadwal publikasi per draft (zona Asia/Jakarta), reschedule dan batal; eksekusi worker dicatat statusnya.
+- Riwayat dengan filter status, tema, format, dan rentang tanggal.
+
+**Publikasi Meta Threads**
+- OAuth Meta resmi (authorize → code → token long-lived 60 hari) lewat halaman Publikasi.
+- Toggle live **default mati**; tanpa live antrean dicatat `REQUIRES_LIVE` dan tidak ada post nyata.
+- Worker dua langkah (buat container → publish), klaim antrean atomik, kuota Meta 250 post/24 jam.
+- Status jujur: `PUBLISHED` (media_id wajib), `NEEDS_REVIEW` (ambigu, rekonsiliasi operator), `DUPLICATE`, `FAILED`, `REQUIRES_LIVE`.
+- Batas teks 500 karakter ditegakkan di API **dan** trigger PostgreSQL.
+
+**Keamanan & operasi**
+- Login admin sesi + CSRF (Argon2id); token Meta **tidak** disimpan di DB — hanya presence + kedaluwarsa; nilai token di file `0600` di worker.
+- Idempotensi: klaim atomik, ambigu after-send tidak mengirim ulang buta, konkurensi dua proses hanya satu panggilan container.
+- Monorepo npm workspaces (web/api/worker/contracts/db), Docker Compose 4 service, migrasi additive/idempotent `001`–`006`, penyimpanan UTC dengan tampilan WIB.
+
 ## Jalankan lokal
 
 Butuh Node.js 24+, npm, Docker, dan Docker Compose.
