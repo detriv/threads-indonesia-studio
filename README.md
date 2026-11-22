@@ -2,7 +2,7 @@
 
 Dashboard editorial untuk satu admin dan satu akun Threads Indonesia, fokus pada keseharian usia 20-an.
 
-**Repo:** https://github.com/detriv/threads-indonesia-studio · **Visibility:** public
+**Repo:** https://github.com/detriv/threads-indonesia-studio · **Visibility:** public · **Lisensi:** [MIT](LICENSE)
 
 **Status fase**
 
